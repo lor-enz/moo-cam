@@ -1,6 +1,5 @@
 package kiwi.lorenz.moocam.ui.camera
 
-import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import kiwi.lorenz.moocam.ui.theme.AppTheme
 
 @Composable
 fun PermissionExplainerLayout(
@@ -22,17 +21,24 @@ fun PermissionExplainerLayout(
     onButtonClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppTheme.spacing.large),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(headline)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(subText)
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = headline,
+            style = AppTheme.typography.displayLarge
+        )
+        Spacer(modifier = Modifier.height(AppTheme.spacing.medium))
+        Text(
+            text = subText,
+            style = AppTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(AppTheme.spacing.small))
         Button(onClick = onButtonClick) {
             Text(buttonLabel)
         }
-
     }
 }
