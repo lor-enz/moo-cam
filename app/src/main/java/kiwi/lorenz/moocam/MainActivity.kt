@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Text
 import dagger.hilt.android.AndroidEntryPoint
+import kiwi.lorenz.moocam.ui.camera.CameraScreen
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
 @AndroidEntryPoint
@@ -15,7 +16,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MooCamTheme {
-                Text("Welcome")
+                CameraScreen()
             }
         }
     }
