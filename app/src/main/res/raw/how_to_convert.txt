@@ -1,0 +1,5 @@
+convert using VLC to
+Audio - Vorbis (OGG)
+Wrench -> Audio Codec
+    Just 1 Channel
+    Add Filter "Volume normalizer"
