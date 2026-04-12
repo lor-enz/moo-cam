@@ -1,14 +1,13 @@
 package kiwi.lorenz.moocam.ui.camera
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
@@ -25,6 +24,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
+const val TAG = "CameraScreen"
+
 @Composable
 fun CameraScreen(
     viewModel: CameraViewModel = hiltViewModel()
@@ -38,10 +39,7 @@ fun CameraScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Yellow))
+        if (isPreview) { Box(modifier = Modifier.fillMaxSize().background(Color.Yellow))
         } else {
             surfaceRequest?.let { request ->
                 CameraPreview(
@@ -59,20 +57,26 @@ fun CameraScreen(
             verticalArrangement = Arrangement.Bottom
 
         ) {
-            CaptureButton()
+            CaptureButton(
+                onClick = {
+                    viewModel.takePhoto {
+                        Log.i(TAG, "Photo taken!")
+                    }
+                }
+            )
+
             Spacer(modifier = Modifier.size(100.dp))
         }
     }
 }
 
 @Composable
-fun CaptureButton() {
+fun CaptureButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.size(80.dp),
-        onClick = {}
-    ) {
-        RoundedCornerShape(percent = 50)
-    }
+        shape = RoundedCornerShape(percent = 50),
+        onClick = onClick
+    ) {}
 }
 
 
