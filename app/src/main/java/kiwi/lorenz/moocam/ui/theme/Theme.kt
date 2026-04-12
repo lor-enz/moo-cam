@@ -1,8 +1,10 @@
 package kiwi.lorenz.moocam.ui.theme
 
 import android.os.Build
+import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.tooling.preview.Preview
 import kiwi.lorenz.moocam.R
 
 @Composable
@@ -79,4 +82,27 @@ object AppTheme {
     val spacing: Spacing
         @Composable
         get() = LocalSpacing.current
+}
+
+/**
+ * Custom Multipreview annotation for MooCam.
+ * Use this instead of @Preview to see Light and Dark modes at once.
+ */
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION)
+@Preview(name = "Light Mode", showBackground = true)
+@Preview(name = "Dark Mode", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+annotation class MooCamPreviews
+
+/**
+ * A wrapper for Previews that ensures the Theme and a Background Surface are applied.
+ */
+@Composable
+fun MooCamPreview(content: @Composable () -> Unit) {
+    MooCamTheme {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            content = content
+        )
+    }
 }

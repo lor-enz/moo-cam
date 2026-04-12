@@ -14,6 +14,13 @@ val Typography = Typography(
         fontSize = 28.sp,
         letterSpacing = (-0.02).sp
     ),
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        letterSpacing = (-0.02).sp
+    ),
+
     // Heading: 17px / weight 600 / letter-spacing -0.01em
     headlineSmall = TextStyle(
         fontFamily = FontFamily.Default,
