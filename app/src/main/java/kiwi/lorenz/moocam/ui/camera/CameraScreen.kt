@@ -59,7 +59,7 @@ fun CameraScreen(
         ) {
             CaptureButton(
                 onClick = {
-                    viewModel.takePhoto {
+                    viewModel.buttonTapped() {
                         Log.i(TAG, "Photo taken!")
                     }
                 }

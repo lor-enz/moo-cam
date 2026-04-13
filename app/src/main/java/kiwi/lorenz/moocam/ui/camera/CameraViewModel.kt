@@ -17,10 +17,14 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,6 +37,9 @@ class CameraViewModel @Inject constructor(
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
+
+    private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
+    private var countdownJob: Job? = null
 
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
@@ -89,8 +96,41 @@ class CameraViewModel @Inject constructor(
         )
     }
 
+    fun buttonTapped(onPhotoSaved: () -> Unit) {
+        when (val state = _timerState.value) {
+            is TimerState.Idle -> { startCountdown(3, onPhotoSaved) }
+
+            is TimerState.Counting -> { stopCountdown() }
+
+            is TimerState.Capturing -> { /* Nothing, too late */ }
+        }
+    }
+
+    private fun stopCountdown() {
+        countdownJob?.cancel()
+    }
+
+    private fun startCountdown(seconds: Int, onPhotoSaved: () -> Unit) {
+        countdownJob?.cancel()
+        viewModelScope.launch {
+            for (i in seconds downTo 1) {
+                _timerState.value = TimerState.Counting(i)
+                delay(1000L)
+            }
+            _timerState.value = TimerState.Capturing
+            takePhoto(onPhotoSaved)
+            _timerState.value = TimerState.Idle
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         cameraProvider?.unbindAll()
     }
+}
+
+sealed class TimerState {
+    object Idle : TimerState()
+    data class Counting(val secondsLeft: Int) : TimerState()
+    object Capturing : TimerState()
 }
