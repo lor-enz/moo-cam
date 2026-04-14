@@ -1,4 +1,4 @@
-package kiwi.lorenz.moocam.ui.camera
+package kiwi.lorenz.moocam.ui.permission
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.MooCamPreview
 import kiwi.lorenz.moocam.ui.theme.MooCamPreviews
