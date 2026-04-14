@@ -5,11 +5,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,11 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kiwi.lorenz.moocam.R
+import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
 const val TAG = "CameraScreen"
@@ -38,25 +46,29 @@ fun CameraScreen(
         viewModel.bindCamera(lifecycleOwner)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) { Box(modifier = Modifier.fillMaxSize().background(Color.Yellow))
+    Column(modifier = Modifier.fillMaxSize()) {
+        // TODO Maybe Status bar padding at the top? It's camera so maybe we don't want it...
+        if (isPreview) {
+            Box(modifier = Modifier.weight(1f).background(Color.Yellow))
         } else {
             surfaceRequest?.let { request ->
                 CameraPreview(
                     surfaceRequest = request,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
-
-        // TODO SystemBarsPadding
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .background(colorResource(R.color.dark_charcoal)),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
-
         ) {
+            TimeSelector()
+            Spacer(Modifier.height(spacing.large))
             CaptureButton(
                 onClick = {
                     viewModel.buttonTapped() {
@@ -65,15 +77,42 @@ fun CameraScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.size(100.dp))
+            Spacer(Modifier.height(spacing.large))
+            // TODO Add navigation bar padding at the bottom
         }
     }
 }
 
 @Composable
-fun CaptureButton(onClick: () -> Unit) {
+fun TimeSelector(
+    modifier: Modifier = Modifier,
+    delayOptions: Array<Int> = arrayOf(1, 3, 5, 10),
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(spacing.small, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        for (delay in delayOptions) {
+            DelayChip(delay = delay, {})
+        }
+    }
+}
+
+@Composable
+fun DelayChip(delay: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
-        modifier = Modifier.size(80.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(percent = 20),
+        onClick = onClick,
+        content = { Text(delay.toString()) } // like this or is there a nicer way?
+    )
+}
+
+@Composable
+fun CaptureButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        modifier = modifier.size(80.dp),
         shape = RoundedCornerShape(percent = 50),
         onClick = onClick
     ) {}
