@@ -1,6 +1,7 @@
 package kiwi.lorenz.moocam.ui.camera
 
 import android.util.Log
+import androidx.camera.core.SurfaceRequest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,13 +40,23 @@ fun CameraScreen(
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val surfaceRequest by viewModel.surfaceRequest.collectAsStateWithLifecycle()
-    val isPreview = LocalInspectionMode.current
-
     LaunchedEffect(lifecycleOwner) {
         viewModel.bindCamera(lifecycleOwner)
     }
 
+    val surfaceRequest by viewModel.surfaceRequest.collectAsStateWithLifecycle()
+    CameraScreenContent(
+        onCaptureButtonTap = {
+            viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") }) },
+        surfaceRequest = surfaceRequest)
+}
+
+@Composable
+private fun CameraScreenContent(
+    onCaptureButtonTap: () -> Unit,
+    surfaceRequest: SurfaceRequest?
+) {
+    val isPreview = LocalInspectionMode.current
     Column(modifier = Modifier.fillMaxSize()) {
         // TODO Maybe Status bar padding at the top? It's camera so maybe we don't want it...
         if (isPreview) {
@@ -70,11 +81,7 @@ fun CameraScreen(
             TimeSelector()
             Spacer(Modifier.height(spacing.large))
             CaptureButton(
-                onClick = {
-                    viewModel.buttonTapped() {
-                        Log.i(TAG, "Photo taken!")
-                    }
-                }
+                onClick = onCaptureButtonTap
             )
 
             Spacer(Modifier.height(spacing.large))
@@ -123,6 +130,9 @@ fun CaptureButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun PreviewCameraScreen() {
     MooCamTheme() {
-        CameraScreen()
+        CameraScreenContent(
+            onCaptureButtonTap = {},
+            surfaceRequest = null
+        )
     }
 }

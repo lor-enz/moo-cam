@@ -16,7 +16,7 @@ import kiwi.lorenz.moocam.ui.theme.MooCamPreview
 import kiwi.lorenz.moocam.ui.theme.MooCamPreviews
 
 @Composable
-fun PermissionExplainerLayout(
+fun PermissionExplainerContent(
     headline: String,
     subText: String,
     buttonLabel: String,
@@ -49,7 +49,7 @@ fun PermissionExplainerLayout(
 @Composable
 private fun PreviewPermissionExplainer() {
     MooCamPreview {
-        PermissionExplainerLayout(
+        PermissionExplainerContent(
             headline = "MooCam needs to see to moo",
             subText = "Camera access is required to take photos.\n Tap the button below to trigger the system permission dialog to show app and give MooCam access to the camera.",
             buttonLabel = "Allow Camera",

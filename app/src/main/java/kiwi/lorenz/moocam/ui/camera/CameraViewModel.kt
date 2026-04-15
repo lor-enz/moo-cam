@@ -63,7 +63,7 @@ class CameraViewModel @Inject constructor(
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
     }
 
-    fun takePhoto(onPhotoSaved: () -> Unit) {
+    private fun takePhoto(onPhotoSaved: () -> Unit) {
         val imageCapture = imageCapture ?: return
 
         val contentValues = ContentValues().apply {

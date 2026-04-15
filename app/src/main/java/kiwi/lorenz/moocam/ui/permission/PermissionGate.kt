@@ -38,7 +38,7 @@ fun PermissionGate(modifier: Modifier = Modifier) {
         }
 
         !askedBefore -> {
-            PermissionExplainerLayout(
+            PermissionExplainerContent(
                 headline = stringResource(R.string.permission_first_title),
                 subText = stringResource(R.string.permission_first_subtext),
                 buttonLabel = stringResource(R.string.permission_first_button_allow),
@@ -49,7 +49,7 @@ fun PermissionGate(modifier: Modifier = Modifier) {
         }
 
         cameraPermissionState.status.shouldShowRationale -> {
-            PermissionExplainerLayout(
+            PermissionExplainerContent(
                 headline = stringResource(R.string.permission_sec_title),
                 subText = stringResource(R.string.permission_sec_subtext),
                 buttonLabel = stringResource(R.string.permission_sec_button_allow),
@@ -60,7 +60,7 @@ fun PermissionGate(modifier: Modifier = Modifier) {
         }
 
         else -> {
-            PermissionExplainerLayout(
+            PermissionExplainerContent(
                 headline = stringResource(R.string.permission_denied_title),
                 subText = stringResource(R.string.permission_denied_subtext),
                 buttonLabel = stringResource(R.string.permission_denied_button),
