@@ -1,7 +1,6 @@
 package kiwi.lorenz.moocam.ui.camera
 
 import android.util.Log
-import androidx.camera.core.SurfaceRequest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,17 +44,17 @@ fun CameraScreen(
         viewModel.bindCamera(lifecycleOwner)
     }
 
-    val surfaceRequest by viewModel.surfaceRequest.collectAsStateWithLifecycle()
+    val cameraState by viewModel.cameraState.collectAsStateWithLifecycle()
     CameraScreenContent(
         onCaptureButtonTap = {
             viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") }) },
-        surfaceRequest = surfaceRequest)
+        cameraState = cameraState)
 }
 
 @Composable
 private fun CameraScreenContent(
     onCaptureButtonTap: () -> Unit,
-    surfaceRequest: SurfaceRequest?
+    cameraState: CameraScreenState
 ) {
     val isPreview = LocalInspectionMode.current
     Column(modifier = Modifier.fillMaxSize()) {
@@ -62,11 +62,37 @@ private fun CameraScreenContent(
         if (isPreview) {
             Box(modifier = Modifier.weight(1f).background(Color.Yellow))
         } else {
-            surfaceRequest?.let { request ->
-                CameraPreview(
-                    surfaceRequest = request,
-                    modifier = Modifier.weight(1f)
-                )
+            when (cameraState) {
+                is CameraScreenState.Ready -> {
+                    CameraPreview(
+                        surfaceRequest = cameraState.surfaceRequest,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                is CameraScreenState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color.White)
+                    }
+                }
+                is CameraScreenState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .background(Color.DarkGray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Could not start camera: ${cameraState.message}",
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
 
@@ -132,7 +158,7 @@ private fun PreviewCameraScreen() {
     MooCamTheme() {
         CameraScreenContent(
             onCaptureButtonTap = {},
-            surfaceRequest = null
+            cameraState = CameraScreenState.Loading
         )
     }
 }

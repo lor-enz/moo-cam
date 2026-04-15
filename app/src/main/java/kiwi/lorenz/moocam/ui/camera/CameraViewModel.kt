@@ -32,8 +32,8 @@ class CameraViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
-    val surfaceRequest = _surfaceRequest.asStateFlow()
+    private val _cameraState = MutableStateFlow<CameraScreenState>(CameraScreenState.Loading)
+    val cameraState = _cameraState.asStateFlow()
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
@@ -42,24 +42,32 @@ class CameraViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
+        _cameraState.value = CameraScreenState.Loading
         val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
 
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
+            try {
+                cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider { request ->
-                    _surfaceRequest.value = request
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider { request ->
+                        _cameraState.value = CameraScreenState.Ready(request)
+                    }
                 }
+
+                cameraProvider?.unbindAll()
+
+                imageCapture = ImageCapture.Builder().build()
+                cameraProvider?.bindToLifecycle(
+                    lifecycleOwner = lifecycleOwner,
+                    cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+                    imageCapture, preview
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize camera", e)
+                _cameraState.value =
+                    CameraScreenState.Error(e.message ?: "Unable to initialize camera")
             }
-
-            cameraProvider?.unbindAll()
-
-            imageCapture = ImageCapture.Builder().build()
-            cameraProvider?.bindToLifecycle(
-                lifecycleOwner = lifecycleOwner,
-                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
-                imageCapture, preview)
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
     }
 
@@ -127,6 +135,12 @@ class CameraViewModel @Inject constructor(
         super.onCleared()
         cameraProvider?.unbindAll()
     }
+}
+
+sealed class CameraScreenState {
+    object Loading : CameraScreenState()
+    data class Ready(val surfaceRequest: SurfaceRequest) : CameraScreenState()
+    data class Error(val message: String) : CameraScreenState()
 }
 
 sealed class TimerState {
