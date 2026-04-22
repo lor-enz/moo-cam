@@ -17,11 +17,13 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import kiwi.lorenz.moocam.R
-import kiwi.lorenz.moocam.ui.camera.CameraScreen
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun PermissionGate(modifier: Modifier = Modifier) {
+fun PermissionGate(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
     var askedBefore by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -34,7 +36,7 @@ fun PermissionGate(modifier: Modifier = Modifier) {
 
     when {
         cameraPermissionState.status.isGranted -> {
-            CameraScreen()
+            content()
         }
 
         !askedBefore -> {

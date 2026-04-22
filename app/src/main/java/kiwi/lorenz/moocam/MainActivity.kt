@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
+import kiwi.lorenz.moocam.ui.camera.CameraScreen
 import kiwi.lorenz.moocam.ui.permission.PermissionGate
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
@@ -15,7 +16,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MooCamTheme {
-                PermissionGate()
+                PermissionGate(
+                    content = { CameraScreen() }
+                )
             }
         }
     }
