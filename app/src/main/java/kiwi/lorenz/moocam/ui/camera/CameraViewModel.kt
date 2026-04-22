@@ -3,6 +3,7 @@ package kiwi.lorenz.moocam.ui.camera
 import android.content.ContentValues
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -21,6 +22,7 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import kiwi.lorenz.moocam.R
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import javax.inject.Inject
+import androidx.annotation.OptIn as OptIn1
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
@@ -52,7 +55,7 @@ class CameraViewModel @Inject constructor(
     private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
     private var countdownJob: Job? = null
 
-    @OptIn(ExperimentalCamera2Interop::class)
+    @OptIn1(ExperimentalCamera2Interop::class)
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         _cameraState.value = CameraScreenState.Loading
         val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
@@ -170,11 +173,19 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
+                if (i == 2) playMooSound()
                 delay(1000L)
             }
             _timerState.value = TimerState.Capturing
             takePhoto(onPhotoSaved)
             _timerState.value = TimerState.Idle
+        }
+    }
+
+    private fun playMooSound() {
+        MediaPlayer.create(context, R.raw.moo_1)?.apply {
+            setOnCompletionListener { release() }
+            start()
         }
     }
 
