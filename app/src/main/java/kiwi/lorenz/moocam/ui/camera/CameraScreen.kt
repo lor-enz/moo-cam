@@ -2,14 +2,18 @@ package kiwi.lorenz.moocam.ui.camera
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -67,24 +71,27 @@ private fun CameraScreenContent(
     onDelayChange: (Int) -> Unit
 ) {
     val isPreview = LocalInspectionMode.current
-    Column(modifier = Modifier.fillMaxSize()) {
-        // TODO Maybe Status bar padding at the top? It's camera so maybe we don't want it...
+    Column(modifier = Modifier.fillMaxSize().background(Color.Black).statusBarsPadding()) {
         if (isPreview) {
             Box(modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
                 .background(Color.Yellow))
         } else {
             when (cameraState) {
                 is CameraScreenState.Ready -> {
-                    CameraPreview(
-                        surfaceRequest = cameraState.surfaceRequest,
-                        modifier = Modifier.weight(1f)
-                    )
+                    val previewRatio = if (cameraState.aspectRatio == AspectRatio.RATIO_4_3) 3f / 4f else 9f / 16f
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        CameraPreview(
+                            surfaceRequest = cameraState.surfaceRequest,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(previewRatio)
+                        )
+                    }
                 }
                 is CameraScreenState.Loading -> {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+
                             .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
@@ -94,7 +101,7 @@ private fun CameraScreenContent(
                 is CameraScreenState.Error -> {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+
                             .fillMaxSize()
                             .background(Color.DarkGray),
                         contentAlignment = Alignment.Center
@@ -110,11 +117,11 @@ private fun CameraScreenContent(
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .background(colorResource(R.color.dark_charcoal)),
+                .fillMaxSize()
+                .background(colorResource(R.color.dark_charcoal))
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Bottom
+            verticalArrangement = Arrangement.Center
         ) {
             SegmentedControl(
                 modifier = Modifier.padding(horizontal = spacing.large, vertical = spacing.medium),
@@ -128,7 +135,6 @@ private fun CameraScreenContent(
             )
 
             Spacer(Modifier.height(spacing.large))
-            // TODO Add navigation bar padding at the bottom
         }
     }
 }

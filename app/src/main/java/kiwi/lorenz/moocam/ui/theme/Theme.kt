@@ -30,8 +30,8 @@ fun MooCamTheme(
         onSecondary = colorResource(R.color.white),
         tertiary = colorResource(R.color.light_green),
         onTertiary = colorResource(R.color.dark_green),
-        background = colorResource(R.color.off_white),
-        onBackground = colorResource(R.color.dark_charcoal),
+        background = colorResource(R.color.dark_charcoal),
+        onBackground = colorResource(R.color.off_white),
         surface = colorResource(R.color.off_white),
         onSurface = colorResource(R.color.dark_charcoal),
         outline = colorResource(R.color.gallery)

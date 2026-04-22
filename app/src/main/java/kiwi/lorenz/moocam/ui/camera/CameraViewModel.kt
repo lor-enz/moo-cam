@@ -2,19 +2,24 @@ package kiwi.lorenz.moocam.ui.camera
 
 import android.content.ContentValues
 import android.content.Context
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.compose.runtime.MutableState
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -26,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import javax.inject.Inject
 
 @HiltViewModel
@@ -46,6 +52,7 @@ class CameraViewModel @Inject constructor(
     private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
     private var countdownJob: Job? = null
 
+    @OptIn(ExperimentalCamera2Interop::class)
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         _cameraState.value = CameraScreenState.Loading
         val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
@@ -54,15 +61,29 @@ class CameraViewModel @Inject constructor(
             try {
                 cameraProvider = cameraProviderFuture.get()
 
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider { request ->
-                        _cameraState.value = CameraScreenState.Ready(request)
+                val aspectRatio = resolveSensorAspectRatio(cameraProvider!!)
+                val resolutionSelector = ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(
+                        if (aspectRatio == AspectRatio.RATIO_4_3)
+                            AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+                        else
+                            AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
+                    )
+                    .build()
+
+                val preview = Preview.Builder()
+                    .setResolutionSelector(resolutionSelector)
+                    .build().also {
+                        it.setSurfaceProvider { request ->
+                            _cameraState.value = CameraScreenState.Ready(request, aspectRatio)
+                        }
                     }
-                }
 
                 cameraProvider?.unbindAll()
 
-                imageCapture = ImageCapture.Builder().build()
+                imageCapture = ImageCapture.Builder()
+                    .setResolutionSelector(resolutionSelector)
+                    .build()
                 cameraProvider?.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
                     cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
@@ -74,6 +95,23 @@ class CameraViewModel @Inject constructor(
                     CameraScreenState.Error(e.message ?: "Unable to initialize camera")
             }
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    private fun resolveSensorAspectRatio(cameraProvider: ProcessCameraProvider): Int {
+        val backCameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
+            CameraSelector.DEFAULT_BACK_CAMERA.filter(listOf(it)).isNotEmpty()
+        } ?: return AspectRatio.RATIO_4_3
+
+        val sensorRect = Camera2CameraInfo.from(backCameraInfo)
+            .getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+            ?: return AspectRatio.RATIO_4_3
+
+        val sensorRatio = sensorRect.width().toFloat() / sensorRect.height()
+        return if (abs(sensorRatio - 4f / 3f) <= abs(sensorRatio - 16f / 9f))
+            AspectRatio.RATIO_4_3
+        else
+            AspectRatio.RATIO_16_9
     }
 
     private fun takePhoto(onPhotoSaved: () -> Unit) {
@@ -148,7 +186,7 @@ class CameraViewModel @Inject constructor(
 
 sealed class CameraScreenState {
     object Loading : CameraScreenState()
-    data class Ready(val surfaceRequest: SurfaceRequest) : CameraScreenState()
+    data class Ready(val surfaceRequest: SurfaceRequest, val aspectRatio: Int) : CameraScreenState()
     data class Error(val message: String) : CameraScreenState()
 }
 
