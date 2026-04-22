@@ -14,6 +14,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.compose.runtime.MutableState
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -37,6 +38,10 @@ class CameraViewModel @Inject constructor(
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
+
+    val delays = arrayOf(5, 7, 10, 15) // hard coded on purpose
+    private val _selectedDelay = MutableStateFlow<Int>(10)
+    val selectedDelay = _selectedDelay.asStateFlow()
 
     private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
     private var countdownJob: Job? = null
@@ -106,12 +111,16 @@ class CameraViewModel @Inject constructor(
 
     fun buttonTapped(onPhotoSaved: () -> Unit) {
         when (val state = _timerState.value) {
-            is TimerState.Idle -> { startCountdown(3, onPhotoSaved) }
+            is TimerState.Idle -> { startCountdown(selectedDelay.value, onPhotoSaved) }
 
             is TimerState.Counting -> { stopCountdown() }
 
             is TimerState.Capturing -> { /* Nothing, too late */ }
         }
+    }
+
+    fun setDelay(newDelay: Int) {
+        _selectedDelay.value = newDelay
     }
 
     private fun stopCountdown() {

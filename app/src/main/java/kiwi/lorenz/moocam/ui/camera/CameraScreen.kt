@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,22 +46,33 @@ fun CameraScreen(
     }
 
     val cameraState by viewModel.cameraState.collectAsStateWithLifecycle()
+    val selectedDelay by viewModel.selectedDelay.collectAsStateWithLifecycle()
+
     CameraScreenContent(
         onCaptureButtonTap = {
             viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") }) },
-        cameraState = cameraState)
+        cameraState = cameraState,
+        delays = viewModel.delays,
+        selectedDelay = selectedDelay, // is passing the Int directly best practice here?
+        onDelayChange = { newDelay -> viewModel.setDelay(newDelay)}
+    )
 }
 
 @Composable
 private fun CameraScreenContent(
     onCaptureButtonTap: () -> Unit,
-    cameraState: CameraScreenState
+    cameraState: CameraScreenState,
+    delays: Array<Int>,
+    selectedDelay: Int,
+    onDelayChange: (Int) -> Unit
 ) {
     val isPreview = LocalInspectionMode.current
     Column(modifier = Modifier.fillMaxSize()) {
         // TODO Maybe Status bar padding at the top? It's camera so maybe we don't want it...
         if (isPreview) {
-            Box(modifier = Modifier.weight(1f).background(Color.Yellow))
+            Box(modifier = Modifier
+                .weight(1f)
+                .background(Color.Yellow))
         } else {
             when (cameraState) {
                 is CameraScreenState.Ready -> {
@@ -104,7 +116,12 @@ private fun CameraScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            TimeSelector()
+            SegmentedControl(
+                modifier = Modifier.padding(horizontal = spacing.large, vertical = spacing.medium),
+                items = delays.toList(), // TODO arrays? list? think about this
+                selectedItem = selectedDelay,
+                onItemSelected = { i -> onDelayChange(i) },
+            )
             Spacer(Modifier.height(spacing.large))
             CaptureButton(
                 onClick = onCaptureButtonTap
@@ -112,22 +129,6 @@ private fun CameraScreenContent(
 
             Spacer(Modifier.height(spacing.large))
             // TODO Add navigation bar padding at the bottom
-        }
-    }
-}
-
-@Composable
-fun TimeSelector(
-    modifier: Modifier = Modifier,
-    delayOptions: Array<Int> = arrayOf(1, 3, 5, 10),
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(spacing.small, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        for (delay in delayOptions) {
-            DelayChip(delay = delay, {})
         }
     }
 }
@@ -158,7 +159,10 @@ private fun PreviewCameraScreen() {
     MooCamTheme() {
         CameraScreenContent(
             onCaptureButtonTap = {},
-            cameraState = CameraScreenState.Loading
+            cameraState = CameraScreenState.Loading,
+            delays = arrayOf(5, 7, 10, 15),
+            selectedDelay = 7,
+            onDelayChange = {},
         )
     }
 }
