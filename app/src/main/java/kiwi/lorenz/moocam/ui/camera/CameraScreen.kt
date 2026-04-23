@@ -15,18 +15,23 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,6 +39,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.ui.SegmentedControl
+import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
@@ -50,11 +56,16 @@ fun CameraScreen(
 
     val cameraState by viewModel.cameraState.collectAsStateWithLifecycle()
     val selectedDelay by viewModel.selectedDelay.collectAsStateWithLifecycle()
+    val timerState by viewModel.timerState.collectAsStateWithLifecycle()
+
+
 
     CameraScreenContent(
         onCaptureButtonTap = {
-            viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") }) },
+            viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") })
+        },
         cameraState = cameraState,
+        timerState = timerState,
         delays = viewModel.delays,
         selectedDelay = selectedDelay, // is passing the Int directly best practice here?
         onDelayChange = { newDelay -> viewModel.setDelay(newDelay)}
@@ -65,12 +76,16 @@ fun CameraScreen(
 private fun CameraScreenContent(
     onCaptureButtonTap: () -> Unit,
     cameraState: CameraScreenState,
+    timerState: TimerState,
     delays: Array<Int>,
     selectedDelay: Int,
     onDelayChange: (Int) -> Unit
 ) {
     val isPreview = LocalInspectionMode.current
-    Column(modifier = Modifier.fillMaxSize().background(Color.Black).statusBarsPadding()) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .background(Color.Black)
+        .statusBarsPadding()) {
         if (isPreview) {
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -83,7 +98,9 @@ private fun CameraScreenContent(
                     Box(modifier = Modifier.fillMaxWidth()) {
                         CameraPreview(
                             surfaceRequest = cameraState.surfaceRequest,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(previewRatio)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(previewRatio)
                         )
                     }
                 }
@@ -130,7 +147,8 @@ private fun CameraScreenContent(
             )
             Spacer(Modifier.height(spacing.large))
             CaptureButton(
-                onClick = onCaptureButtonTap
+                onClick = onCaptureButtonTap,
+                timerState = timerState,
             )
 
             Spacer(Modifier.height(spacing.large))
@@ -139,22 +157,57 @@ private fun CameraScreenContent(
 }
 
 @Composable
-fun DelayChip(delay: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
-        modifier = modifier,
-        shape = RoundedCornerShape(percent = 20),
-        onClick = onClick,
-        content = { Text(delay.toString()) } // like this or is there a nicer way?
-    )
-}
+fun CaptureButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    timerState: TimerState
+) {
 
-@Composable
-fun CaptureButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val buttonText by remember(timerState) {
+        derivedStateOf {
+            when (val state = timerState) {
+                is TimerState.Counting -> state.secondsLeft.toString()
+                else -> ""
+            }
+        }
+    }
+
     Button(
         modifier = modifier.size(80.dp),
-        shape = RoundedCornerShape(percent = 50),
-        onClick = onClick
-    ) {}
+        shape = CircleShape,
+        onClick = onClick,
+        colors = when (timerState) {
+            is TimerState.Capturing -> {
+                ButtonDefaults.buttonColors(
+                    containerColor = colorResource(R.color.camera_red),
+                    contentColor = colorResource(R.color.off_white)
+                )
+            }
+
+            is TimerState.Counting -> {
+                ButtonDefaults.buttonColors(
+                    containerColor = colorResource(R.color.kiwi_brown),
+                    contentColor = colorResource(R.color.dark_charcoal)
+                )
+            }
+
+            is TimerState.Idle -> {
+                ButtonDefaults.buttonColors(
+                    containerColor = colorResource(R.color.kiwi_green),
+                    contentColor = colorResource(R.color.dark_charcoal)
+                )
+            }
+        }
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = buttonText,
+                textAlign = TextAlign.Center,
+                style = AppTheme.typography.headlineMedium,
+                maxLines = 1
+            )
+        }
+    }
 }
 
 
@@ -168,6 +221,7 @@ private fun PreviewCameraScreen() {
             delays = arrayOf(5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
+            timerState = TimerState.Counting(12),
         )
     }
 }

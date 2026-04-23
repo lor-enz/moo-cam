@@ -53,7 +53,10 @@ class CameraViewModel @Inject constructor(
     val selectedDelay = _selectedDelay.asStateFlow()
 
     private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
+    val timerState = _timerState.asStateFlow()
+
     private var countdownJob: Job? = null
+
 
     @OptIn1(ExperimentalCamera2Interop::class)
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
@@ -100,6 +103,7 @@ class CameraViewModel @Inject constructor(
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
     }
 
+    @OptIn1(ExperimentalCamera2Interop::class)
     @OptIn(ExperimentalCamera2Interop::class)
     private fun resolveSensorAspectRatio(cameraProvider: ProcessCameraProvider): Int {
         val backCameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
@@ -117,8 +121,11 @@ class CameraViewModel @Inject constructor(
             AspectRatio.RATIO_16_9
     }
 
-    private fun takePhoto(onPhotoSaved: () -> Unit) {
-        val imageCapture = imageCapture ?: return
+    private fun takePhoto(onPhotoSaved: () -> Unit, onCaptureFinished: () -> Unit) {
+        val imageCapture = imageCapture ?: run {
+            onCaptureFinished()
+            return
+        }
 
         val contentValues = ContentValues().apply {
             val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
@@ -141,10 +148,12 @@ class CameraViewModel @Inject constructor(
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(error: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${error.message}", error)
+                    onCaptureFinished()
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     onPhotoSaved()
+                    onCaptureFinished()
                 }
             }
         )
@@ -166,19 +175,24 @@ class CameraViewModel @Inject constructor(
 
     private fun stopCountdown() {
         countdownJob?.cancel()
+        _timerState.value = TimerState.Idle
     }
 
     private fun startCountdown(seconds: Int, onPhotoSaved: () -> Unit) {
         countdownJob?.cancel()
-        viewModelScope.launch {
+        countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
                 if (i == 2) playMooSound()
                 delay(1000L)
             }
             _timerState.value = TimerState.Capturing
-            takePhoto(onPhotoSaved)
-            _timerState.value = TimerState.Idle
+            takePhoto(
+                onPhotoSaved = onPhotoSaved,
+                onCaptureFinished = {
+                    _timerState.value = TimerState.Idle 
+                }
+            )
         }
     }
 

@@ -16,4 +16,7 @@
     <color name="dark_green">#FF5A6328</color>
     <color name="light_brown">#FFF7EDE5</color>
     <color name="dark_brown">#FF8A4E2A</color>
+
+    <!-- More Colors -->
+    <color name="camera_red">#FFC81D25</color>
 </resources>
