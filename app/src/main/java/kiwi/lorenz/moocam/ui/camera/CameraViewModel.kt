@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import android.view.Surface
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -63,6 +64,10 @@ class CameraViewModel @Inject constructor(
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
+
+    // How the device is held, as a Surface.ROTATION_* value. The UI stays in portrait,
+    // but photos taken in landscape must still be saved upright.
+    private var deviceRotation = Surface.ROTATION_0
 
     // Whether a tapped focus spot is locked, so the viewfinder can keep showing it
     private val _isFocusLocked = MutableStateFlow(false)
@@ -150,6 +155,7 @@ class CameraViewModel @Inject constructor(
                     // MAXIMIZE_QUALITY (and using the flash) makes CameraX refocus for the
                     // photo and unlock the focus afterwards.
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .setTargetRotation(deviceRotation)
                     .build()
                 val camera = cameraProvider!!.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
@@ -199,6 +205,11 @@ class CameraViewModel @Inject constructor(
         val cameraControl = camera?.cameraControl ?: return
         cameraControl.startFocusAndMetering(action)
         _isFocusLocked.value = true
+    }
+
+    fun setDeviceRotation(rotation: Int) {
+        deviceRotation = rotation
+        imageCapture?.targetRotation = rotation
     }
 
     // CameraX drops the focus lock when the camera closes, e.g. when the app goes to the background

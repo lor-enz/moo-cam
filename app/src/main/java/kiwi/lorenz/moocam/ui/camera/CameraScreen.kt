@@ -6,6 +6,8 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.util.Size
+import android.view.OrientationEventListener
+import android.view.Surface
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -64,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
@@ -92,6 +96,7 @@ fun CameraScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshLastPhoto()
     }
+    DeviceRotationEffect(onRotationChange = viewModel::setDeviceRotation)
 
     val isVolumeTooLow by viewModel.isVolumeTooLow.collectAsStateWithLifecycle()
     val isPrivateOutputConnected by viewModel.isPrivateOutputConnected.collectAsStateWithLifecycle()
@@ -156,6 +161,33 @@ fun CameraScreen(
             },
             onDismiss = { showSoundPicker = false }
         )
+    }
+}
+
+// The activity is locked to portrait, so the display never rotates. Read how the device is
+// held from the sensor instead, so landscape photos are saved upright. Only listens while
+// the screen is started, to not use the sensor in the background.
+@Composable
+private fun DeviceRotationEffect(onRotationChange: (Int) -> Unit) {
+    val context = LocalContext.current
+    val currentOnRotationChange by rememberUpdatedState(onRotationChange)
+    LifecycleStartEffect(context) {
+        val listener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                // Unknown when the phone lies flat; keep the last rotation then
+                if (orientation == ORIENTATION_UNKNOWN) return
+                // Degrees clockwise from upright, mapped to the matching display rotation
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+                currentOnRotationChange(rotation)
+            }
+        }
+        listener.enable()
+        onStopOrDispose { listener.disable() }
     }
 }
 
