@@ -32,13 +32,8 @@ Images
 - Capture button showing countdown
 - Animal sound playing 2 seconds before photo
 - Photo saved to gallery
-
-### Upcoming and Ideas
-
-- Blinking flashlight in final countdown seconds
+- Multiple rear camera support
 - Selectable animal sounds
-- Visual feedback after photo is taken
 - Show recently taken photos in-app
 - Tap to focus
-- Pinch to zoom
-- Multiple rear camera support
+- Blinking flashlight in final countdown seconds
