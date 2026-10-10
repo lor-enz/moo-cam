@@ -24,7 +24,7 @@ class SoundRepository @Inject constructor(
             animalSoundIds[sound] = soundPool.load(context, sound.resId, 1)
         }
 
-        // load shutter sound — pick whichever one you decide to keep
+        // load shutter sound
         shutterSoundId = soundPool.load(context, R.raw.shutter_click_normalized_trim, 1)
     }
 

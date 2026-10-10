@@ -3,7 +3,6 @@ package kiwi.lorenz.moocam.ui.camera
 import android.content.ContentValues
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
-import android.media.MediaPlayer
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -56,13 +55,12 @@ class CameraViewModel @Inject constructor(
     private val _selectedDelay = MutableStateFlow<Int>(10)
     val selectedDelay = _selectedDelay.asStateFlow()
 
-    private var _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
+    private val _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
     val timerState = _timerState.asStateFlow()
 
     private var countdownJob: Job? = null
 
 
-    @OptIn1(ExperimentalCamera2Interop::class)
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         _cameraState.value = CameraScreenState.Loading
         val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
@@ -108,7 +106,6 @@ class CameraViewModel @Inject constructor(
     }
 
     @OptIn1(ExperimentalCamera2Interop::class)
-    @OptIn(ExperimentalCamera2Interop::class)
     private fun resolveSensorAspectRatio(cameraProvider: ProcessCameraProvider): Int {
         val backCameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
             CameraSelector.DEFAULT_BACK_CAMERA.filter(listOf(it)).isNotEmpty()

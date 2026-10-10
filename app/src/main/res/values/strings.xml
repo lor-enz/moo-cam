@@ -13,6 +13,7 @@
     <string name="permission_denied_subtext">Camera access was permanently denied. You\'ll need to enable it in Settings</string>
     <string name="permission_denied_button">Open settings</string>
 
+    <string name="camera_start_failed">Could not start camera: %1$s</string>
     <string name="photo_capture_failed">Oops, the photo could not be saved</string>
 
 

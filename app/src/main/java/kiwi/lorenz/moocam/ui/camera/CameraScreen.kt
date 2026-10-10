@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -84,14 +84,15 @@ private fun CameraScreenContent(
     timerState: TimerState,
     delays: Array<Int>,
     selectedDelay: Int,
-    onDelayChange: (Int) -> Unit
+    onDelayChange: (Int) -> Unit,
+    // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
+    showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
-    val isPreview = LocalInspectionMode.current
     Column(modifier = Modifier
         .fillMaxSize()
         .background(Color.Black)
         .statusBarsPadding()) {
-        if (isPreview) {
+        if (showFakeViewfinder) {
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(3f / 4f)
@@ -109,10 +110,12 @@ private fun CameraScreenContent(
                         )
                     }
                 }
+                // Loading and Error fill the whole screen on purpose: this pushes the
+                // controls below out of view, so no timer or capture button is shown
+                // while there is no usable camera.
                 is CameraScreenState.Loading -> {
                     Box(
                         modifier = Modifier
-
                             .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
@@ -122,13 +125,12 @@ private fun CameraScreenContent(
                 is CameraScreenState.Error -> {
                     Box(
                         modifier = Modifier
-
                             .fillMaxSize()
                             .background(Color.DarkGray),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Could not start camera: ${cameraState.message}",
+                            text = stringResource(R.string.camera_start_failed, cameraState.message),
                             color = Color.White
                         )
                     }
@@ -227,6 +229,38 @@ private fun PreviewCameraScreen() {
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Counting(12),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewCameraScreenLoading() {
+    MooCamTheme() {
+        CameraScreenContent(
+            onCaptureButtonTap = {},
+            cameraState = CameraScreenState.Loading,
+            delays = arrayOf(5, 7, 10, 15),
+            selectedDelay = 7,
+            onDelayChange = {},
+            timerState = TimerState.Idle,
+            showFakeViewfinder = false,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewCameraScreenError() {
+    MooCamTheme() {
+        CameraScreenContent(
+            onCaptureButtonTap = {},
+            cameraState = CameraScreenState.Error("No back camera found"),
+            delays = arrayOf(5, 7, 10, 15),
+            selectedDelay = 7,
+            onDelayChange = {},
+            timerState = TimerState.Idle,
+            showFakeViewfinder = false,
         )
     }
 }
