@@ -38,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.derivedStateOf
@@ -57,6 +58,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -97,6 +99,14 @@ fun CameraScreen(
         viewModel.refreshLastPhoto()
     }
     DeviceRotationEffect(onRotationChange = viewModel::setDeviceRotation)
+
+    // The phone often waits on a shelf or tripod for the right moment; if the screen turned
+    // off, the app would go to the background and stop the camera
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
 
     val isVolumeTooLow by viewModel.isVolumeTooLow.collectAsStateWithLifecycle()
     val isPrivateOutputConnected by viewModel.isPrivateOutputConnected.collectAsStateWithLifecycle()
