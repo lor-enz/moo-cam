@@ -3,9 +3,11 @@ package kiwi.lorenz.moocam.ui.camera
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,10 +18,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,6 +65,14 @@ fun CameraScreen(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         viewModel.cancelCountdown()
+    }
+
+    val isVolumeTooLow by viewModel.isVolumeTooLow.collectAsStateWithLifecycle()
+    val isPrivateOutputConnected by viewModel.isPrivateOutputConnected.collectAsStateWithLifecycle()
+
+    // A photo without the moo is pointless, so stop the countdown when the overlay shows
+    LaunchedEffect(isVolumeTooLow) {
+        if (isVolumeTooLow) viewModel.cancelCountdown()
     }
 
     val context = LocalContext.current
@@ -89,7 +103,9 @@ fun CameraScreen(
         timerState = timerState,
         delays = viewModel.delays,
         selectedDelay = selectedDelay, // is passing the Int directly best practice here?
-        onDelayChange = { newDelay -> viewModel.setDelay(newDelay)}
+        onDelayChange = { newDelay -> viewModel.setDelay(newDelay)},
+        isVolumeTooLow = isVolumeTooLow,
+        isPrivateOutputConnected = isPrivateOutputConnected
     )
 }
 
@@ -101,84 +117,165 @@ private fun CameraScreenContent(
     delays: Array<Int>,
     selectedDelay: Int,
     onDelayChange: (Int) -> Unit,
+    isVolumeTooLow: Boolean,
+    isPrivateOutputConnected: Boolean,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Black)
-        .statusBarsPadding()) {
-        if (showFakeViewfinder) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(3f / 4f)
-                .background(Color.Yellow))
-        } else {
-            when (cameraState) {
-                is CameraScreenState.Ready -> {
-                    val previewRatio = if (cameraState.aspectRatio == AspectRatio.RATIO_4_3) 3f / 4f else 9f / 16f
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        CameraPreview(
-                            surfaceRequest = cameraState.surfaceRequest,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()) {
+            if (showFakeViewfinder) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3f / 4f)
+                    .background(Color.Yellow))
+            } else {
+                when (cameraState) {
+                    is CameraScreenState.Ready -> {
+                        val previewRatio = if (cameraState.aspectRatio == AspectRatio.RATIO_4_3) 3f / 4f else 9f / 16f
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            CameraPreview(
+                                surfaceRequest = cameraState.surfaceRequest,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(previewRatio)
+                            )
+                        }
+                    }
+                    // Loading and Error fill the whole screen on purpose: this pushes the
+                    // controls below out of view, so no timer or capture button is shown
+                    // while there is no usable camera.
+                    is CameraScreenState.Loading -> {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(previewRatio)
-                        )
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
                     }
-                }
-                // Loading and Error fill the whole screen on purpose: this pushes the
-                // controls below out of view, so no timer or capture button is shown
-                // while there is no usable camera.
-                is CameraScreenState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color.White)
-                    }
-                }
-                is CameraScreenState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.DarkGray),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.camera_start_failed, cameraState.message),
-                            color = Color.White
-                        )
+                    is CameraScreenState.Error -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.DarkGray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.camera_start_failed, cameraState.message),
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colorResource(R.color.dark_charcoal))
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                SegmentedControl(
+                    modifier = Modifier.padding(horizontal = spacing.large, vertical = spacing.medium),
+                    items = delays.toList(), // TODO arrays? list? think about this
+                    selectedItem = selectedDelay,
+                    onItemSelected = { i -> onDelayChange(i) },
+                )
+                Spacer(Modifier.height(spacing.large))
+                if (isPrivateOutputConnected) {
+                    PrivateOutputBanner(
+                        modifier = Modifier.padding(horizontal = spacing.large)
+                    )
+                    Spacer(Modifier.height(spacing.medium))
+                }
+                CaptureButton(
+                    onClick = onCaptureButtonTap,
+                    timerState = timerState,
+                )
+
+                Spacer(Modifier.height(spacing.large))
+            }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorResource(R.color.dark_charcoal))
-                .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            SegmentedControl(
-                modifier = Modifier.padding(horizontal = spacing.large, vertical = spacing.medium),
-                items = delays.toList(), // TODO arrays? list? think about this
-                selectedItem = selectedDelay,
-                onItemSelected = { i -> onDelayChange(i) },
-            )
-            Spacer(Modifier.height(spacing.large))
-            CaptureButton(
-                onClick = onCaptureButtonTap,
-                timerState = timerState,
-            )
-
-            Spacer(Modifier.height(spacing.large))
+        if (isVolumeTooLow) {
+            VolumeTooLowOverlay()
         }
     }
 }
 
+// Covers the whole screen and can't be dismissed. It goes away by itself once the volume is turned up.
+@Composable
+private fun VolumeTooLowOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            // Swallow all touches so the camera can't be used without sound
+            .clickable(interactionSource = null, indication = null, onClick = {}),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(spacing.large)
+                .background(colorResource(R.color.off_white), RoundedCornerShape(24.dp))
+                .padding(spacing.large),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.volume_plus),
+                contentDescription = null,
+                tint = colorResource(R.color.dark_charcoal),
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(Modifier.height(spacing.medium))
+            Text(
+                text = stringResource(R.string.volume_too_low_title),
+                style = AppTheme.typography.headlineMedium,
+                color = colorResource(R.color.dark_charcoal),
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(spacing.small))
+            Text(
+                text = stringResource(R.string.volume_too_low_text),
+                style = AppTheme.typography.bodyLarge,
+                color = colorResource(R.color.dark_charcoal),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrivateOutputBanner(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .background(colorResource(R.color.light_brown), RoundedCornerShape(12.dp))
+            .padding(horizontal = spacing.medium, vertical = spacing.small),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(android.R.drawable.stat_sys_warning),
+            contentDescription = null,
+            tint = colorResource(R.color.dark_brown),
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(spacing.small))
+        Text(
+            text = stringResource(R.string.private_output_warning),
+            style = AppTheme.typography.bodyMedium,
+            color = colorResource(R.color.dark_brown)
+        )
+    }
+}
+
+// Don't use the volume buttons as a shutter button: people need them to turn the volume
+// back up when the volume overlay shows, and the moo needs the volume anyway.
 @Composable
 fun CaptureButton(
     onClick: () -> Unit,
@@ -245,6 +342,8 @@ private fun PreviewCameraScreen() {
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Counting(12),
+            isVolumeTooLow = false,
+            isPrivateOutputConnected = false,
         )
     }
 }
@@ -260,6 +359,8 @@ private fun PreviewCameraScreenLoading() {
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,
+            isVolumeTooLow = false,
+            isPrivateOutputConnected = false,
             showFakeViewfinder = false,
         )
     }
@@ -276,7 +377,42 @@ private fun PreviewCameraScreenError() {
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,
+            isVolumeTooLow = false,
+            isPrivateOutputConnected = false,
             showFakeViewfinder = false,
+        )
+    }
+}
+@Preview
+@Composable
+private fun PreviewCameraScreenVolumeTooLow() {
+    MooCamTheme() {
+        CameraScreenContent(
+            onCaptureButtonTap = {},
+            cameraState = CameraScreenState.Loading,
+            delays = arrayOf(5, 7, 10, 15),
+            selectedDelay = 7,
+            onDelayChange = {},
+            timerState = TimerState.Idle,
+            isVolumeTooLow = true,
+            isPrivateOutputConnected = false,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewCameraScreenPrivateOutput() {
+    MooCamTheme() {
+        CameraScreenContent(
+            onCaptureButtonTap = {},
+            cameraState = CameraScreenState.Loading,
+            delays = arrayOf(5, 7, 10, 15),
+            selectedDelay = 7,
+            onDelayChange = {},
+            timerState = TimerState.Idle,
+            isVolumeTooLow = false,
+            isPrivateOutputConnected = true,
         )
     }
 }

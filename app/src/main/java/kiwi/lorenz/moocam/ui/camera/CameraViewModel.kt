@@ -27,13 +27,17 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import javax.inject.Inject
@@ -42,7 +46,8 @@ import androidx.annotation.OptIn as OptIn1
 @HiltViewModel
 class CameraViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val soundRepository: SoundRepository
+    private val soundRepository: SoundRepository,
+    audioOutputMonitor: AudioOutputMonitor
 ) : ViewModel() {
 
     private val _cameraState = MutableStateFlow<CameraScreenState>(CameraScreenState.Loading)
@@ -59,6 +64,21 @@ class CameraViewModel @Inject constructor(
     val timerState = _timerState.asStateFlow()
 
     private var countdownJob: Job? = null
+
+    // Below this media volume the moo is too quiet to catch a kid's attention
+    private val minMediaVolume = 0.2f
+
+    private val audioOutputState = audioOutputMonitor.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // Start as false, so nothing flashes up before the first real value arrives
+    val isVolumeTooLow = audioOutputState
+        .map { it != null && it.mediaVolume < minMediaVolume }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val isPrivateOutputConnected = audioOutputState
+        .map { it?.isPrivateOutputConnected == true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     // One-off events for the UI, e.g. to show a toast
     private val _events = Channel<CameraEvent>(Channel.BUFFERED)
