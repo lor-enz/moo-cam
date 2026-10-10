@@ -40,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -47,7 +48,7 @@ import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 // Shows the sound that plays before the photo; tapping it opens the sound picker
 @Composable
 fun SoundLabel(
-    sound: AnimalSound,
+    sound: SoundChoice,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -84,10 +85,10 @@ fun SoundLabel(
 // next to it or the back button can't throw away the choice by accident.
 @Composable
 fun SoundPickerDialog(
-    sounds: List<AnimalSound>,
-    selectedSound: AnimalSound,
-    onSoundTap: (AnimalSound) -> Unit,
-    onConfirm: (AnimalSound) -> Unit,
+    sounds: List<SoundChoice>,
+    selectedSound: SoundChoice,
+    onSoundTap: (SoundChoice) -> Unit,
+    onConfirm: (SoundChoice) -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -100,10 +101,10 @@ fun SoundPickerDialog(
 
 @Composable
 private fun SoundPickerContent(
-    sounds: List<AnimalSound>,
-    selectedSound: AnimalSound,
-    onSoundTap: (AnimalSound) -> Unit,
-    onConfirm: (AnimalSound) -> Unit,
+    sounds: List<SoundChoice>,
+    selectedSound: SoundChoice,
+    onSoundTap: (SoundChoice) -> Unit,
+    onConfirm: (SoundChoice) -> Unit,
     onDismiss: () -> Unit
 ) {
     // Only applied when OK is tapped; Cancel keeps the previous sound
@@ -193,7 +194,7 @@ private fun SoundPickerContent(
 @Composable
 private fun PreviewSoundLabel() {
     MooCamTheme {
-        SoundLabel(sound = AnimalSound.MOO, enabled = true, onClick = {})
+        SoundLabel(sound = SoundChoice.Fixed(AnimalSound.MOO), enabled = true, onClick = {})
     }
 }
 
@@ -202,8 +203,8 @@ private fun PreviewSoundLabel() {
 private fun PreviewSoundPicker() {
     MooCamTheme {
         SoundPickerContent(
-            sounds = AnimalSound.entries,
-            selectedSound = AnimalSound.MEOW,
+            sounds = AnimalSound.entries.map { SoundChoice.Fixed(it) } + SoundChoice.Surprise,
+            selectedSound = SoundChoice.Surprise,
             onSoundTap = {},
             onConfirm = {},
             onDismiss = {}

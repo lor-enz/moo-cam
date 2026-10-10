@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
 import kiwi.lorenz.moocam.settings.SettingsRepository
@@ -91,10 +92,14 @@ class CameraViewModel @Inject constructor(
 
     private var countdownJob: Job? = null
 
-    val sounds = AnimalSound.entries
+    private val defaultSound = SoundChoice.Fixed(AnimalSound.MOO)
+    val sounds = AnimalSound.entries.map { SoundChoice.Fixed(it) } + SoundChoice.Surprise
     val selectedSound = settingsRepository.selectedSound
-        .map { it ?: AnimalSound.MOO }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, AnimalSound.MOO)
+        .map { it ?: defaultSound }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, defaultSound)
+
+    // Remembered so a surprise is never the same sound twice in a row
+    private var lastSurpriseSound: AnimalSound? = null
 
     // Last photo taken in this session, shown in the gallery button
     private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
@@ -302,12 +307,23 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setSelectedDelay(newDelay) }
     }
 
-    fun setSound(sound: AnimalSound) {
-        viewModelScope.launch { settingsRepository.setSelectedSound(sound) }
+    fun setSound(choice: SoundChoice) {
+        viewModelScope.launch { settingsRepository.setSelectedSound(choice) }
     }
 
-    // Lets the user hear a sound while picking one
-    fun previewSound(sound: AnimalSound) {
+    // Lets the user hear a sound while picking one; a surprise plays one of the sounds
+    fun previewSound(choice: SoundChoice) {
+        playSound(choice)
+    }
+
+    private fun playSound(choice: SoundChoice) {
+        val sound = when (choice) {
+            is SoundChoice.Fixed -> choice.sound
+            SoundChoice.Surprise -> AnimalSound.entries
+                .filter { it != lastSurpriseSound }
+                .random()
+                .also { lastSurpriseSound = it }
+        }
         soundRepository.playAnimalSound(sound)
     }
 
@@ -326,7 +342,7 @@ class CameraViewModel @Inject constructor(
         countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
-                if (i == 2) soundRepository.playAnimalSound(selectedSound.value)
+                if (i == 2) playSound(selectedSound.value)
                 delay(1000L)
             }
             soundRepository.playShutter()

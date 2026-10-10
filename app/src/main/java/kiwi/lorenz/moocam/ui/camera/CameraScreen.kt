@@ -74,6 +74,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
@@ -213,7 +214,7 @@ private fun CameraScreenContent(
     isPrivateOutputConnected: Boolean,
     lastPhotoUri: Uri?,
     onGalleryButtonTap: (Uri) -> Unit,
-    selectedSound: AnimalSound,
+    selectedSound: SoundChoice,
     onSoundLabelTap: () -> Unit,
     zoom: ZoomUiState?,
     onZoomPresetTap: (Float) -> Unit,
@@ -554,7 +555,7 @@ private fun PreviewCameraScreen() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
-            selectedSound = AnimalSound.MOO,
+            selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
@@ -578,7 +579,7 @@ private fun PreviewCameraScreenLoading() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
-            selectedSound = AnimalSound.MOO,
+            selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
@@ -603,7 +604,7 @@ private fun PreviewCameraScreenError() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
-            selectedSound = AnimalSound.MOO,
+            selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
@@ -627,7 +628,7 @@ private fun PreviewCameraScreenVolumeTooLow() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
-            selectedSound = AnimalSound.MOO,
+            selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
@@ -651,7 +652,7 @@ private fun PreviewCameraScreenPrivateOutput() {
             isPrivateOutputConnected = true,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
-            selectedSound = AnimalSound.MOO,
+            selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
