@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -126,6 +127,7 @@ class CameraViewModel @Inject constructor(
 
     private fun takePhoto(onPhotoSaved: () -> Unit, onCaptureFinished: () -> Unit) {
         val imageCapture = imageCapture ?: run {
+            showCaptureFailedToast()
             onCaptureFinished()
             return
         }
@@ -151,6 +153,7 @@ class CameraViewModel @Inject constructor(
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(error: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${error.message}", error)
+                    showCaptureFailedToast()
                     onCaptureFinished()
                 }
 
@@ -160,6 +163,10 @@ class CameraViewModel @Inject constructor(
                 }
             }
         )
+    }
+
+    private fun showCaptureFailedToast() {
+        Toast.makeText(context, R.string.photo_capture_failed, Toast.LENGTH_LONG).show()
     }
 
     fun buttonTapped(onPhotoSaved: () -> Unit) {
