@@ -67,6 +67,10 @@ class CameraViewModel @Inject constructor(
 
     private var countdownJob: Job? = null
 
+    val sounds = AnimalSound.entries
+    private val _selectedSound = MutableStateFlow(AnimalSound.MOO)
+    val selectedSound = _selectedSound.asStateFlow()
+
     // Last photo taken in this session, shown in the gallery button
     private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
     val lastPhotoUri = _lastPhotoUri.asStateFlow()
@@ -220,6 +224,15 @@ class CameraViewModel @Inject constructor(
         _selectedDelay.value = newDelay
     }
 
+    fun setSound(sound: AnimalSound) {
+        _selectedSound.value = sound
+    }
+
+    // Lets the user hear a sound while picking one
+    fun previewSound(sound: AnimalSound) {
+        soundRepository.playAnimalSound(sound)
+    }
+
     // Called when the screen stops, so no sound or capture fires while the app is in the background
     fun cancelCountdown() {
         if (_timerState.value is TimerState.Counting) stopCountdown()
@@ -235,7 +248,7 @@ class CameraViewModel @Inject constructor(
         countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
-                if (i == 2) soundRepository.playAnimalSound(AnimalSound.MOO)
+                if (i == 2) soundRepository.playAnimalSound(selectedSound.value)
                 delay(1000L)
             }
             soundRepository.playShutter()

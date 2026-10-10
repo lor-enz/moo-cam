@@ -21,6 +21,7 @@
     <string name="last_photo">Last photo</string>
     <string name="no_gallery_app">No app found to show the photo</string>
     <string name="photo_capture_failed">Oops, the photo could not be saved</string>
+    <string name="choose_sound">Choose a sound</string>
 
 
 </resources>

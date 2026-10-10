@@ -38,6 +38,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +65,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
+import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
@@ -112,8 +116,8 @@ fun CameraScreen(
     val selectedDelay by viewModel.selectedDelay.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val lastPhotoUri by viewModel.lastPhotoUri.collectAsStateWithLifecycle()
-
-
+    val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
+    var showSoundPicker by rememberSaveable { mutableStateOf(false) }
 
     CameraScreenContent(
         onCaptureButtonTap = {
@@ -127,8 +131,23 @@ fun CameraScreen(
         isVolumeTooLow = isVolumeTooLow,
         isPrivateOutputConnected = isPrivateOutputConnected,
         lastPhotoUri = lastPhotoUri,
-        onGalleryButtonTap = { uri -> openInGallery(context, uri) }
+        onGalleryButtonTap = { uri -> openInGallery(context, uri) },
+        selectedSound = selectedSound,
+        onSoundLabelTap = { showSoundPicker = true }
     )
+
+    if (showSoundPicker) {
+        SoundPickerDialog(
+            sounds = viewModel.sounds,
+            selectedSound = selectedSound,
+            onSoundTap = { sound -> viewModel.previewSound(sound) },
+            onConfirm = { sound ->
+                viewModel.setSound(sound)
+                showSoundPicker = false
+            },
+            onDismiss = { showSoundPicker = false }
+        )
+    }
 }
 
 @Composable
@@ -143,6 +162,8 @@ private fun CameraScreenContent(
     isPrivateOutputConnected: Boolean,
     lastPhotoUri: Uri?,
     onGalleryButtonTap: (Uri) -> Unit,
+    selectedSound: AnimalSound,
+    onSoundLabelTap: () -> Unit,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
@@ -151,11 +172,21 @@ private fun CameraScreenContent(
             .fillMaxSize()
             .background(Color.Black)
             .statusBarsPadding()) {
+            val soundLabel = @Composable {
+                SoundLabel(
+                    sound = selectedSound,
+                    enabled = timerState is TimerState.Idle,
+                    onClick = onSoundLabelTap,
+                    modifier = Modifier.padding(spacing.medium)
+                )
+            }
             if (showFakeViewfinder) {
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(3f / 4f)
-                    .background(Color.Yellow))
+                    .background(Color.Yellow)) {
+                    soundLabel()
+                }
             } else {
                 when (cameraState) {
                     is CameraScreenState.Ready -> {
@@ -167,6 +198,7 @@ private fun CameraScreenContent(
                                     .fillMaxWidth()
                                     .aspectRatio(previewRatio)
                             )
+                            soundLabel()
                         }
                     }
                     // Loading and Error fill the whole screen on purpose: this pushes the
@@ -455,6 +487,8 @@ private fun PreviewCameraScreen() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
+            selectedSound = AnimalSound.MOO,
+            onSoundLabelTap = {},
         )
     }
 }
@@ -474,6 +508,8 @@ private fun PreviewCameraScreenLoading() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
+            selectedSound = AnimalSound.MOO,
+            onSoundLabelTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -494,6 +530,8 @@ private fun PreviewCameraScreenError() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
+            selectedSound = AnimalSound.MOO,
+            onSoundLabelTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -513,6 +551,8 @@ private fun PreviewCameraScreenVolumeTooLow() {
             isPrivateOutputConnected = false,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
+            selectedSound = AnimalSound.MOO,
+            onSoundLabelTap = {},
         )
     }
 }
@@ -532,6 +572,8 @@ private fun PreviewCameraScreenPrivateOutput() {
             isPrivateOutputConnected = true,
             lastPhotoUri = null,
             onGalleryButtonTap = {},
+            selectedSound = AnimalSound.MOO,
+            onSoundLabelTap = {},
         )
     }
 }
