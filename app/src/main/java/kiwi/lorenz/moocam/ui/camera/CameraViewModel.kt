@@ -63,7 +63,7 @@ class CameraViewModel @Inject constructor(
 
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         _cameraState.value = CameraScreenState.Loading
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(lifecycleOwner as Context)
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
             try {
