@@ -29,6 +29,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
+import kiwi.lorenz.moocam.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -49,6 +50,7 @@ import androidx.annotation.OptIn as OptIn1
 class CameraViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val soundRepository: SoundRepository,
+    private val settingsRepository: SettingsRepository,
     audioOutputMonitor: AudioOutputMonitor
 ) : ViewModel() {
 
@@ -59,8 +61,13 @@ class CameraViewModel @Inject constructor(
     private var imageCapture: ImageCapture? = null
 
     val delays = arrayOf(5, 7, 10, 15) // hard coded on purpose
-    private val _selectedDelay = MutableStateFlow<Int>(10)
-    val selectedDelay = _selectedDelay.asStateFlow()
+    private val defaultDelay = 10
+
+    // Eagerly, so the saved value is already loaded when the countdown reads it.
+    // A saved delay that's no longer offered falls back to the default.
+    val selectedDelay = settingsRepository.selectedDelay
+        .map { saved -> saved?.takeIf { it in delays } ?: defaultDelay }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, defaultDelay)
 
     private val _timerState = MutableStateFlow<TimerState>(TimerState.Idle)
     val timerState = _timerState.asStateFlow()
@@ -68,8 +75,9 @@ class CameraViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     val sounds = AnimalSound.entries
-    private val _selectedSound = MutableStateFlow(AnimalSound.MOO)
-    val selectedSound = _selectedSound.asStateFlow()
+    val selectedSound = settingsRepository.selectedSound
+        .map { it ?: AnimalSound.MOO }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AnimalSound.MOO)
 
     // Last photo taken in this session, shown in the gallery button
     private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
@@ -221,11 +229,11 @@ class CameraViewModel @Inject constructor(
     }
 
     fun setDelay(newDelay: Int) {
-        _selectedDelay.value = newDelay
+        viewModelScope.launch { settingsRepository.setSelectedDelay(newDelay) }
     }
 
     fun setSound(sound: AnimalSound) {
-        _selectedSound.value = sound
+        viewModelScope.launch { settingsRepository.setSelectedSound(sound) }
     }
 
     // Lets the user hear a sound while picking one
