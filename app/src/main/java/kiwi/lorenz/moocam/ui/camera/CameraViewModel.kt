@@ -156,7 +156,8 @@ class CameraViewModel @Inject constructor(
             val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
             put(MediaStore.MediaColumns.DISPLAY_NAME, "MOO_$timestamp.jpg")
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            // DCIM is where camera apps store photos; galleries show MooCam as its own album
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_DCIM}/MooCam")
         }
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(
