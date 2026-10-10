@@ -1,5 +1,6 @@
 package kiwi.lorenz.moocam.ui.camera
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,10 +46,13 @@ import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
-// Shows the sound that plays before the photo; tapping it opens the sound picker
+// Shows a current choice on top of the viewfinder, e.g. the sound that plays before the
+// photo; tapping it opens the matching picker
 @Composable
-fun SoundLabel(
-    sound: SoundChoice,
+fun ViewfinderChip(
+    @DrawableRes iconRes: Int,
+    text: String,
+    onClickLabel: String,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -59,7 +63,7 @@ fun SoundLabel(
             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
             .clickable(
                 enabled = enabled,
-                onClickLabel = stringResource(R.string.choose_sound),
+                onClickLabel = onClickLabel,
                 role = Role.Button,
                 onClick = onClick
             )
@@ -67,48 +71,56 @@ fun SoundLabel(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(android.R.drawable.ic_lock_silent_mode_off),
+            painter = painterResource(iconRes),
             contentDescription = null,
             tint = colorResource(R.color.off_white),
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(spacing.small))
         Text(
-            text = sound.displayName,
+            text = text,
             style = AppTheme.typography.bodyLarge,
             color = colorResource(R.color.off_white)
         )
     }
 }
 
-// Tapping a sound plays and selects it. Only Cancel and OK close the dialog, so a tap
+// Tapping an option previews and selects it. Only Cancel and OK close the dialog, so a tap
 // next to it or the back button can't throw away the choice by accident.
+// Options must be saveable in a Bundle (e.g. enums or Serializable), to keep the pending
+// choice across configuration changes.
 @Composable
-fun SoundPickerDialog(
-    sounds: List<SoundChoice>,
-    selectedSound: SoundChoice,
-    onSoundTap: (SoundChoice) -> Unit,
-    onConfirm: (SoundChoice) -> Unit,
+fun <T> OptionPickerDialog(
+    title: String,
+    options: List<T>,
+    selectedOption: T,
+    label: (T) -> String,
+    icon: (T) -> Int,
+    onOptionTap: (T) -> Unit,
+    onConfirm: (T) -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
     ) {
-        SoundPickerContent(sounds, selectedSound, onSoundTap, onConfirm, onDismiss)
+        OptionPickerContent(title, options, selectedOption, label, icon, onOptionTap, onConfirm, onDismiss)
     }
 }
 
 @Composable
-private fun SoundPickerContent(
-    sounds: List<SoundChoice>,
-    selectedSound: SoundChoice,
-    onSoundTap: (SoundChoice) -> Unit,
-    onConfirm: (SoundChoice) -> Unit,
+private fun <T> OptionPickerContent(
+    title: String,
+    options: List<T>,
+    selectedOption: T,
+    label: (T) -> String,
+    icon: (T) -> Int,
+    onOptionTap: (T) -> Unit,
+    onConfirm: (T) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Only applied when OK is tapped; Cancel keeps the previous sound
-    var pendingSound by rememberSaveable { mutableStateOf(selectedSound) }
+    // Only applied when OK is tapped; Cancel keeps the previous option
+    var pendingOption by rememberSaveable { mutableStateOf(selectedOption) }
 
     Column(
         modifier = Modifier
@@ -116,7 +128,7 @@ private fun SoundPickerContent(
             .padding(spacing.large)
     ) {
         Text(
-            text = stringResource(R.string.choose_sound),
+            text = title,
             style = AppTheme.typography.headlineMedium,
             color = colorResource(R.color.dark_charcoal)
         )
@@ -125,8 +137,8 @@ private fun SoundPickerContent(
             modifier = Modifier.selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(spacing.extraSmall)
         ) {
-            sounds.forEach { sound ->
-                val isSelected = sound == pendingSound
+            options.forEach { option ->
+                val isSelected = option == pendingOption
                 val shape = RoundedCornerShape(12.dp)
                 Row(
                     modifier = Modifier
@@ -143,22 +155,22 @@ private fun SoundPickerContent(
                             selected = isSelected,
                             role = Role.RadioButton,
                             onClick = {
-                                pendingSound = sound
-                                onSoundTap(sound)
+                                pendingOption = option
+                                onOptionTap(option)
                             }
                         )
                         .padding(horizontal = spacing.medium),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(sound.iconRes),
+                        painter = painterResource(icon(option)),
                         contentDescription = null,
                         tint = colorResource(R.color.dark_charcoal),
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(Modifier.width(spacing.medium))
                     Text(
-                        text = sound.displayName,
+                        text = label(option),
                         style = AppTheme.typography.bodyLarge,
                         color = colorResource(R.color.dark_charcoal)
                     )
@@ -178,7 +190,7 @@ private fun SoundPickerContent(
             }
             Spacer(Modifier.width(spacing.small))
             Button(
-                onClick = { onConfirm(pendingSound) },
+                onClick = { onConfirm(pendingOption) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colorResource(R.color.kiwi_green),
                     contentColor = colorResource(R.color.off_white)
@@ -192,9 +204,15 @@ private fun SoundPickerContent(
 
 @Preview
 @Composable
-private fun PreviewSoundLabel() {
+private fun PreviewViewfinderChip() {
     MooCamTheme {
-        SoundLabel(sound = SoundChoice.Fixed(AnimalSound.MOO), enabled = true, onClick = {})
+        ViewfinderChip(
+            iconRes = android.R.drawable.ic_lock_silent_mode_off,
+            text = AnimalSound.MOO.displayName,
+            onClickLabel = "",
+            enabled = true,
+            onClick = {}
+        )
     }
 }
 
@@ -202,10 +220,13 @@ private fun PreviewSoundLabel() {
 @Composable
 private fun PreviewSoundPicker() {
     MooCamTheme {
-        SoundPickerContent(
-            sounds = AnimalSound.entries.map { SoundChoice.Fixed(it) } + SoundChoice.Surprise,
-            selectedSound = SoundChoice.Surprise,
-            onSoundTap = {},
+        OptionPickerContent(
+            title = stringResource(R.string.choose_sound),
+            options = AnimalSound.entries.map { SoundChoice.Fixed(it) } + SoundChoice.Surprise,
+            selectedOption = SoundChoice.Surprise,
+            label = { it.displayName },
+            icon = { it.iconRes },
+            onOptionTap = {},
             onConfirm = {},
             onDismiss = {}
         )

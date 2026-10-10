@@ -166,10 +166,13 @@ fun CameraScreen(
     )
 
     if (showSoundPicker) {
-        SoundPickerDialog(
-            sounds = viewModel.sounds,
-            selectedSound = selectedSound,
-            onSoundTap = { sound -> viewModel.previewSound(sound) },
+        OptionPickerDialog(
+            title = stringResource(R.string.choose_sound),
+            options = viewModel.sounds,
+            selectedOption = selectedSound,
+            label = { it.displayName },
+            icon = { it.iconRes },
+            onOptionTap = { sound -> viewModel.previewSound(sound) },
             onConfirm = { sound ->
                 viewModel.setSound(sound)
                 showSoundPicker = false
@@ -255,8 +258,10 @@ private fun CameraScreenContent(
             .statusBarsPadding()) {
             // Drawn on top of the viewfinder
             val viewfinderOverlay: @Composable BoxScope.() -> Unit = {
-                SoundLabel(
-                    sound = selectedSound,
+                ViewfinderChip(
+                    iconRes = android.R.drawable.ic_lock_silent_mode_off,
+                    text = selectedSound.displayName,
+                    onClickLabel = stringResource(R.string.choose_sound),
                     enabled = timerState is TimerState.Idle,
                     onClick = onSoundLabelTap,
                     modifier = Modifier.padding(spacing.medium)
