@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.Toast
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -22,7 +21,6 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import kiwi.lorenz.moocam.R
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,9 +29,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import javax.inject.Inject
@@ -59,6 +59,10 @@ class CameraViewModel @Inject constructor(
     val timerState = _timerState.asStateFlow()
 
     private var countdownJob: Job? = null
+
+    // One-off events for the UI, e.g. to show a toast
+    private val _events = Channel<CameraEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
 
 
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
@@ -122,9 +126,9 @@ class CameraViewModel @Inject constructor(
             AspectRatio.RATIO_16_9
     }
 
-    private fun takePhoto(onPhotoSaved: () -> Unit, onCaptureFinished: () -> Unit) {
+    private fun takePhoto(onCaptureFinished: () -> Unit) {
         val imageCapture = imageCapture ?: run {
-            showCaptureFailedToast()
+            _events.trySend(CameraEvent.CaptureFailed)
             onCaptureFinished()
             return
         }
@@ -150,25 +154,21 @@ class CameraViewModel @Inject constructor(
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(error: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${error.message}", error)
-                    showCaptureFailedToast()
+                    _events.trySend(CameraEvent.CaptureFailed)
                     onCaptureFinished()
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    onPhotoSaved()
+                    _events.trySend(CameraEvent.PhotoSaved)
                     onCaptureFinished()
                 }
             }
         )
     }
 
-    private fun showCaptureFailedToast() {
-        Toast.makeText(context, R.string.photo_capture_failed, Toast.LENGTH_LONG).show()
-    }
-
-    fun buttonTapped(onPhotoSaved: () -> Unit) {
+    fun buttonTapped() {
         when (val state = _timerState.value) {
-            is TimerState.Idle -> { startCountdown(selectedDelay.value, onPhotoSaved) }
+            is TimerState.Idle -> { startCountdown(selectedDelay.value) }
 
             is TimerState.Counting -> { stopCountdown() }
 
@@ -190,7 +190,7 @@ class CameraViewModel @Inject constructor(
         _timerState.value = TimerState.Idle
     }
 
-    private fun startCountdown(seconds: Int, onPhotoSaved: () -> Unit) {
+    private fun startCountdown(seconds: Int) {
         countdownJob?.cancel()
         countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
@@ -201,7 +201,6 @@ class CameraViewModel @Inject constructor(
             soundRepository.playShutter()
             _timerState.value = TimerState.Capturing
             takePhoto(
-                onPhotoSaved = onPhotoSaved,
                 onCaptureFinished = {
                     _timerState.value = TimerState.Idle 
                 }
@@ -219,6 +218,11 @@ sealed class CameraScreenState {
     object Loading : CameraScreenState()
     data class Ready(val surfaceRequest: SurfaceRequest, val aspectRatio: Int) : CameraScreenState()
     data class Error(val message: String) : CameraScreenState()
+}
+
+sealed class CameraEvent {
+    object PhotoSaved : CameraEvent()
+    object CaptureFailed : CameraEvent()
 }
 
 sealed class TimerState {

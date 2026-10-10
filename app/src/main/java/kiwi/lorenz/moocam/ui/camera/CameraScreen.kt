@@ -1,6 +1,7 @@
 package kiwi.lorenz.moocam.ui.camera
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +61,20 @@ fun CameraScreen(
         viewModel.cancelCountdown()
     }
 
+    val context = LocalContext.current
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                CameraEvent.PhotoSaved -> Log.i(TAG, "Photo taken!")
+                CameraEvent.CaptureFailed -> Toast.makeText(
+                    context,
+                    R.string.photo_capture_failed,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     val cameraState by viewModel.cameraState.collectAsStateWithLifecycle()
     val selectedDelay by viewModel.selectedDelay.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
@@ -67,7 +83,7 @@ fun CameraScreen(
 
     CameraScreenContent(
         onCaptureButtonTap = {
-            viewModel.buttonTapped({ Log.i(TAG, "Photo taken!") })
+            viewModel.buttonTapped()
         },
         cameraState = cameraState,
         timerState = timerState,
