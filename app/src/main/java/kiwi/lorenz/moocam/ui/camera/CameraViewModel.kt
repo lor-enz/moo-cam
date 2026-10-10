@@ -34,6 +34,7 @@ import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
+import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -101,6 +102,22 @@ class CameraViewModel @Inject constructor(
 
     // Remembered so a surprise is never the same sound twice in a row
     private var lastSurpriseSound: AnimalSound? = null
+
+    // Phones without a flashlight don't get the flash chip; false until the camera is bound
+    private val _hasFlashUnit = MutableStateFlow(false)
+    val hasFlashUnit = _hasFlashUnit.asStateFlow()
+
+    // Off unless chosen, so nobody gets a light in the kid's face by surprise
+    val flashes = AttentionFlash.entries
+    val selectedFlash = settingsRepository.selectedFlash
+        .map { it ?: AttentionFlash.OFF }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AttentionFlash.OFF)
+
+    // Like the surprise sound, random never repeats the previous pattern
+    private var lastRandomFlash: AttentionFlash? = null
+
+    // A flash played from the picker, replaced when the next one is tapped
+    private var flashPreviewJob: Job? = null
 
     // Last photo taken in this session, shown in the gallery button
     private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
@@ -170,6 +187,7 @@ class CameraViewModel @Inject constructor(
                 )
                 this.camera = camera
                 this.preview = preview
+                _hasFlashUnit.value = camera.cameraInfo.hasFlashUnit()
                 // Replace the observer of an earlier bind instead of adding a second one
                 camera.cameraInfo.zoomState.removeObservers(lifecycleOwner)
                 camera.cameraInfo.zoomState.observe(lifecycleOwner) { state ->
@@ -335,6 +353,40 @@ class CameraViewModel @Inject constructor(
         soundRepository.playAnimalSound(sound)
     }
 
+    fun setFlash(flash: AttentionFlash) {
+        viewModelScope.launch { settingsRepository.setSelectedFlash(flash) }
+    }
+
+    // Lets the user see a flash while picking one; random shows one of the patterns
+    fun previewFlash(flash: AttentionFlash) {
+        flashPreviewJob?.cancel()
+        flashPreviewJob = viewModelScope.launch { playFlash(flash) }
+    }
+
+    // Uses the camera's torch, so no extra permission is needed. Always ends with the
+    // light off, also when cancelled, e.g. when the countdown is stopped.
+    private suspend fun playFlash(flash: AttentionFlash) {
+        val pattern = when (flash) {
+            AttentionFlash.RANDOM -> AttentionFlash.patterns
+                .filter { it != lastRandomFlash }
+                .random()
+                .also { lastRandomFlash = it }
+                .pattern
+            else -> flash.pattern
+        }
+        val cameraControl = camera?.cameraControl ?: return
+        if (pattern.isEmpty() || !_hasFlashUnit.value) return
+        try {
+            pattern.forEachIndexed { index, millis ->
+                // The returned future only fails if the camera closes, which turns the torch off anyway
+                cameraControl.enableTorch(index % 2 == 0)
+                delay(millis)
+            }
+        } finally {
+            cameraControl.enableTorch(false)
+        }
+    }
+
     // Called when the screen stops, so no sound or capture fires while the app is in the background
     fun cancelCountdown() {
         if (_timerState.value is TimerState.Counting) stopCountdown()
@@ -350,7 +402,11 @@ class CameraViewModel @Inject constructor(
         countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
-                if (i == 2) playSound(selectedSound.value)
+                if (i == 2) {
+                    playSound(selectedSound.value)
+                    // A child of the countdown, so stopping the countdown also stops the flash
+                    launch { playFlash(selectedFlash.value) }
+                }
                 delay(1000L)
             }
             soundRepository.playShutter()

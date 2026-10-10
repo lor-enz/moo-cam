@@ -42,6 +42,7 @@ import androidx.compose.ui.window.DialogProperties
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
+import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -224,6 +225,23 @@ private fun PreviewSoundPicker() {
             title = stringResource(R.string.choose_sound),
             options = AnimalSound.entries.map { SoundChoice.Fixed(it) } + SoundChoice.Surprise,
             selectedOption = SoundChoice.Surprise,
+            label = { it.displayName },
+            icon = { it.iconRes },
+            onOptionTap = {},
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFlashPicker() {
+    MooCamTheme {
+        OptionPickerContent(
+            title = stringResource(R.string.choose_flash),
+            options = AttentionFlash.entries,
+            selectedOption = AttentionFlash.THREE_SHORT,
             label = { it.displayName },
             icon = { it.iconRes },
             onOptionTap = {},

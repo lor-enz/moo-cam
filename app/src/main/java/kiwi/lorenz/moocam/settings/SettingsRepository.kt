@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
+import kiwi.lorenz.moocam.flash.AttentionFlash
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -24,6 +25,7 @@ class SettingsRepository @Inject constructor(
 ) {
     private val selectedSoundKey = stringPreferencesKey("selected_sound")
     private val selectedDelayKey = intPreferencesKey("selected_delay")
+    private val selectedFlashKey = stringPreferencesKey("selected_flash")
 
     // Saved in the sound's place; no AnimalSound has this name
     private val surpriseValue = "SURPRISE"
@@ -46,6 +48,11 @@ class SettingsRepository @Inject constructor(
         .map { prefs -> prefs[selectedDelayKey] }
         .distinctUntilChanged()
 
+    // Stored by enum name, like the sound
+    val selectedFlash: Flow<AttentionFlash?> = prefs
+        .map { prefs -> AttentionFlash.entries.find { it.name == prefs[selectedFlashKey] } }
+        .distinctUntilChanged()
+
     suspend fun setSelectedSound(choice: SoundChoice) {
         val value = when (choice) {
             is SoundChoice.Fixed -> choice.sound.name
@@ -56,5 +63,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setSelectedDelay(seconds: Int) {
         dataStore.edit { it[selectedDelayKey] = seconds }
+    }
+
+    suspend fun setSelectedFlash(flash: AttentionFlash) {
+        dataStore.edit { it[selectedFlashKey] = flash.name }
     }
 }

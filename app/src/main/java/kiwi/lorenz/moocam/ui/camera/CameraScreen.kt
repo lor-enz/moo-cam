@@ -78,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
+import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
@@ -142,7 +143,10 @@ fun CameraScreen(
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
     val zoom by viewModel.zoom.collectAsStateWithLifecycle()
     val isFocusLocked by viewModel.isFocusLocked.collectAsStateWithLifecycle()
+    val hasFlashUnit by viewModel.hasFlashUnit.collectAsStateWithLifecycle()
+    val selectedFlash by viewModel.selectedFlash.collectAsStateWithLifecycle()
     var showSoundPicker by rememberSaveable { mutableStateOf(false) }
+    var showFlashPicker by rememberSaveable { mutableStateOf(false) }
 
     CameraScreenContent(
         onCaptureButtonTap = {
@@ -159,6 +163,8 @@ fun CameraScreen(
         onGalleryButtonTap = { uri -> openInGallery(context, uri) },
         selectedSound = selectedSound,
         onSoundLabelTap = { showSoundPicker = true },
+        selectedFlash = selectedFlash.takeIf { hasFlashUnit },
+        onFlashLabelTap = { showFlashPicker = true },
         zoom = zoom,
         onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
         onTapToFocus = { point -> viewModel.focusOn(point) },
@@ -178,6 +184,22 @@ fun CameraScreen(
                 showSoundPicker = false
             },
             onDismiss = { showSoundPicker = false }
+        )
+    }
+
+    if (showFlashPicker) {
+        OptionPickerDialog(
+            title = stringResource(R.string.choose_flash),
+            options = viewModel.flashes,
+            selectedOption = selectedFlash,
+            label = { it.displayName },
+            icon = { it.iconRes },
+            onOptionTap = { flash -> viewModel.previewFlash(flash) },
+            onConfirm = { flash ->
+                viewModel.setFlash(flash)
+                showFlashPicker = false
+            },
+            onDismiss = { showFlashPicker = false }
         )
     }
 }
@@ -244,6 +266,9 @@ private fun CameraScreenContent(
     onGalleryButtonTap: (Uri) -> Unit,
     selectedSound: SoundChoice,
     onSoundLabelTap: () -> Unit,
+    // Null hides the flash chip, for phones without a flashlight
+    selectedFlash: AttentionFlash?,
+    onFlashLabelTap: () -> Unit,
     zoom: ZoomUiState?,
     onZoomPresetTap: (Float) -> Unit,
     onTapToFocus: (MeteringPoint) -> Unit,
@@ -266,6 +291,18 @@ private fun CameraScreenContent(
                     onClick = onSoundLabelTap,
                     modifier = Modifier.padding(spacing.medium)
                 )
+                selectedFlash?.let { flash ->
+                    ViewfinderChip(
+                        iconRes = if (flash == AttentionFlash.OFF) R.drawable.flash_off else R.drawable.flash,
+                        text = flash.shortName,
+                        onClickLabel = stringResource(R.string.choose_flash),
+                        enabled = timerState is TimerState.Idle,
+                        onClick = onFlashLabelTap,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(spacing.medium)
+                    )
+                }
                 zoom?.let {
                     ZoomPresetRow(
                         zoom = it,
@@ -587,6 +624,8 @@ private fun PreviewCameraScreen() {
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
+            selectedFlash = AttentionFlash.THREE_SHORT,
+            onFlashLabelTap = {},
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -611,6 +650,8 @@ private fun PreviewCameraScreenLoading() {
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
+            selectedFlash = AttentionFlash.THREE_SHORT,
+            onFlashLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -636,6 +677,8 @@ private fun PreviewCameraScreenError() {
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
+            selectedFlash = AttentionFlash.THREE_SHORT,
+            onFlashLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -660,6 +703,8 @@ private fun PreviewCameraScreenVolumeTooLow() {
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
+            selectedFlash = AttentionFlash.THREE_SHORT,
+            onFlashLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -684,6 +729,8 @@ private fun PreviewCameraScreenPrivateOutput() {
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
             onSoundLabelTap = {},
+            selectedFlash = AttentionFlash.THREE_SHORT,
+            onFlashLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
