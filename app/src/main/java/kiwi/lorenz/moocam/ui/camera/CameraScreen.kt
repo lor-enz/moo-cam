@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.camera.core.AspectRatio
+import androidx.camera.core.MeteringPoint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -86,6 +87,7 @@ fun CameraScreen(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         viewModel.cancelCountdown()
+        viewModel.onCameraStopped()
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshLastPhoto()
@@ -119,6 +121,7 @@ fun CameraScreen(
     val lastPhotoUri by viewModel.lastPhotoUri.collectAsStateWithLifecycle()
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
     val zoom by viewModel.zoom.collectAsStateWithLifecycle()
+    val isFocusLocked by viewModel.isFocusLocked.collectAsStateWithLifecycle()
     var showSoundPicker by rememberSaveable { mutableStateOf(false) }
 
     CameraScreenContent(
@@ -137,7 +140,9 @@ fun CameraScreen(
         selectedSound = selectedSound,
         onSoundLabelTap = { showSoundPicker = true },
         zoom = zoom,
-        onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) }
+        onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
+        onTapToFocus = { point -> viewModel.focusOn(point) },
+        isFocusLocked = isFocusLocked
     )
 
     if (showSoundPicker) {
@@ -170,6 +175,8 @@ private fun CameraScreenContent(
     onSoundLabelTap: () -> Unit,
     zoom: ZoomUiState?,
     onZoomPresetTap: (Float) -> Unit,
+    onTapToFocus: (MeteringPoint) -> Unit,
+    isFocusLocked: Boolean = false,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
@@ -210,6 +217,8 @@ private fun CameraScreenContent(
                         Box(modifier = Modifier.fillMaxWidth()) {
                             CameraPreview(
                                 surfaceRequest = cameraState.surfaceRequest,
+                                onTapToFocus = onTapToFocus,
+                                isFocusLocked = isFocusLocked,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(previewRatio)
@@ -507,6 +516,7 @@ private fun PreviewCameraScreen() {
             onSoundLabelTap = {},
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
+            onTapToFocus = {},
         )
     }
 }
@@ -530,6 +540,7 @@ private fun PreviewCameraScreenLoading() {
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
+            onTapToFocus = {},
             showFakeViewfinder = false,
         )
     }
@@ -554,6 +565,7 @@ private fun PreviewCameraScreenError() {
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
+            onTapToFocus = {},
             showFakeViewfinder = false,
         )
     }
@@ -577,6 +589,7 @@ private fun PreviewCameraScreenVolumeTooLow() {
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
+            onTapToFocus = {},
         )
     }
 }
@@ -600,6 +613,7 @@ private fun PreviewCameraScreenPrivateOutput() {
             onSoundLabelTap = {},
             zoom = null,
             onZoomPresetTap = {},
+            onTapToFocus = {},
         )
     }
 }

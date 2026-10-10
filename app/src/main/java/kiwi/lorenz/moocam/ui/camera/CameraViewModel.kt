@@ -14,8 +14,10 @@ import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.MeteringPoint
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
@@ -61,6 +63,10 @@ class CameraViewModel @Inject constructor(
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
+
+    // Whether a tapped focus spot is locked, so the viewfinder can keep showing it
+    private val _isFocusLocked = MutableStateFlow(false)
+    val isFocusLocked = _isFocusLocked.asStateFlow()
 
     // Null until the camera is bound
     private val _zoom = MutableStateFlow<ZoomUiState?>(null)
@@ -111,6 +117,7 @@ class CameraViewModel @Inject constructor(
 
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
         _cameraState.value = CameraScreenState.Loading
+        _isFocusLocked.value = false
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
@@ -139,6 +146,10 @@ class CameraViewModel @Inject constructor(
 
                 imageCapture = ImageCapture.Builder()
                     .setResolutionSelector(resolutionSelector)
+                    // Fast shutter for moving toddlers. It also keeps the tap-to-focus lock:
+                    // MAXIMIZE_QUALITY (and using the flash) makes CameraX refocus for the
+                    // photo and unlock the focus afterwards.
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                     .build()
                 val camera = cameraProvider!!.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
@@ -170,8 +181,29 @@ class CameraViewModel @Inject constructor(
     }
 
     fun setZoom(ratio: Float) {
+        val cameraControl = camera?.cameraControl ?: return
+        // A locked focus spot was picked for the old framing and may be on another lens,
+        // so go back to automatic focus. The user can tap again.
+        cameraControl.cancelFocusAndMetering()
+        _isFocusLocked.value = false
         // The returned future only fails if a newer zoom replaces this one, which is fine
-        camera?.cameraControl?.setZoomRatio(ratio)
+        cameraControl.setZoomRatio(ratio)
+    }
+
+    // Focuses and sets the exposure for this spot. Stays locked until the next tap: CameraX
+    // would go back to automatic focus after 5 seconds, but the countdown can be longer.
+    fun focusOn(point: MeteringPoint) {
+        val action = FocusMeteringAction.Builder(point)
+            .disableAutoCancel()
+            .build()
+        val cameraControl = camera?.cameraControl ?: return
+        cameraControl.startFocusAndMetering(action)
+        _isFocusLocked.value = true
+    }
+
+    // CameraX drops the focus lock when the camera closes, e.g. when the app goes to the background
+    fun onCameraStopped() {
+        _isFocusLocked.value = false
     }
 
     @OptIn1(ExperimentalCamera2Interop::class)
