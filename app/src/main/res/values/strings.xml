@@ -17,6 +17,9 @@
     <string name="volume_too_low_title">Turn up the volume</string>
     <string name="volume_too_low_text">Moo Cam needs sound to catch your kid\'s attention</string>
     <string name="private_output_warning">Sound plays on headphones or Bluetooth</string>
+    <string name="open_last_photo">Open last photo</string>
+    <string name="last_photo">Last photo</string>
+    <string name="no_gallery_app">No app found to show the photo</string>
     <string name="photo_capture_failed">Oops, the photo could not be saved</string>
 
 

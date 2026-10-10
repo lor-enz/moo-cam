@@ -2,6 +2,7 @@ package kiwi.lorenz.moocam.ui.camera
 
 import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
 import android.hardware.camera2.CameraCharacteristics
 import android.os.Environment
 import android.provider.MediaStore
@@ -28,6 +29,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -38,6 +40,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import javax.inject.Inject
 import androidx.annotation.OptIn as OptIn1
@@ -63,6 +66,10 @@ class CameraViewModel @Inject constructor(
     val timerState = _timerState.asStateFlow()
 
     private var countdownJob: Job? = null
+
+    // Last photo taken in this session, shown in the gallery button
+    private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
+    val lastPhotoUri = _lastPhotoUri.asStateFlow()
 
     // Below this media volume the moo is too quiet to catch a kid's attention
     private val minMediaVolume = 0.2f
@@ -177,11 +184,26 @@ class CameraViewModel @Inject constructor(
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    _lastPhotoUri.value = outputFileResults.savedUri
                     _events.trySend(CameraEvent.PhotoSaved)
                     onCaptureFinished()
                 }
             }
         )
+    }
+
+    // The photo may have been deleted in the gallery app meanwhile; then go back to the placeholder
+    fun refreshLastPhoto() {
+        val uri = _lastPhotoUri.value ?: return
+        viewModelScope.launch {
+            val exists = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+                        ?.use { it.moveToFirst() } == true
+                }.getOrDefault(false)
+            }
+            if (!exists && _lastPhotoUri.value == uri) _lastPhotoUri.value = null
+        }
     }
 
     fun buttonTapped() {

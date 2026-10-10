@@ -1,8 +1,15 @@
 package kiwi.lorenz.moocam.ui.camera
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import android.util.Size
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.layout.Arrangement
@@ -28,17 +35,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,6 +66,8 @@ import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 const val TAG = "CameraScreen"
 
@@ -65,6 +81,9 @@ fun CameraScreen(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         viewModel.cancelCountdown()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshLastPhoto()
     }
 
     val isVolumeTooLow by viewModel.isVolumeTooLow.collectAsStateWithLifecycle()
@@ -92,6 +111,7 @@ fun CameraScreen(
     val cameraState by viewModel.cameraState.collectAsStateWithLifecycle()
     val selectedDelay by viewModel.selectedDelay.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
+    val lastPhotoUri by viewModel.lastPhotoUri.collectAsStateWithLifecycle()
 
 
 
@@ -105,7 +125,9 @@ fun CameraScreen(
         selectedDelay = selectedDelay, // is passing the Int directly best practice here?
         onDelayChange = { newDelay -> viewModel.setDelay(newDelay)},
         isVolumeTooLow = isVolumeTooLow,
-        isPrivateOutputConnected = isPrivateOutputConnected
+        isPrivateOutputConnected = isPrivateOutputConnected,
+        lastPhotoUri = lastPhotoUri,
+        onGalleryButtonTap = { uri -> openInGallery(context, uri) }
     )
 }
 
@@ -119,6 +141,8 @@ private fun CameraScreenContent(
     onDelayChange: (Int) -> Unit,
     isVolumeTooLow: Boolean,
     isPrivateOutputConnected: Boolean,
+    lastPhotoUri: Uri?,
+    onGalleryButtonTap: (Uri) -> Unit,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
@@ -194,10 +218,24 @@ private fun CameraScreenContent(
                     )
                     Spacer(Modifier.height(spacing.medium))
                 }
-                CaptureButton(
-                    onClick = onCaptureButtonTap,
-                    timerState = timerState,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Equal weights on both sides keep the capture button centered
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        GalleryButton(
+                            photoUri = lastPhotoUri,
+                            enabled = timerState is TimerState.Idle,
+                            onClick = onGalleryButtonTap
+                        )
+                    }
+                    CaptureButton(
+                        onClick = onCaptureButtonTap,
+                        timerState = timerState,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
 
                 Spacer(Modifier.height(spacing.large))
             }
@@ -274,6 +312,77 @@ private fun PrivateOutputBanner(modifier: Modifier = Modifier) {
     }
 }
 
+// Shows the last photo taken in this session, or a placeholder until there is one
+@Composable
+private fun GalleryButton(
+    photoUri: Uri?,
+    enabled: Boolean,
+    onClick: (Uri) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val thumbnail by produceState<ImageBitmap?>(initialValue = null, photoUri) {
+        value = photoUri?.let { uri ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.loadThumbnail(uri, Size(256, 256), null).asImageBitmap()
+                }.getOrNull()
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .alpha(if (enabled) 1f else 0.4f)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.1f))
+            .border(2.dp, colorResource(R.color.off_white), CircleShape)
+            .clickable(
+                enabled = enabled && photoUri != null,
+                onClickLabel = stringResource(R.string.open_last_photo),
+                role = Role.Button,
+                onClick = { photoUri?.let(onClick) }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        val image = thumbnail
+        if (image != null) {
+            Image(
+                bitmap = image,
+                contentDescription = stringResource(R.string.last_photo),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                painter = painterResource(android.R.drawable.ic_menu_gallery),
+                contentDescription = null,
+                tint = colorResource(R.color.off_white),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+// Prefer the camera roll review intent (lets you swipe through photos in e.g. Google Photos),
+// fall back to a plain image viewer
+private fun openInGallery(context: Context, uri: Uri) {
+    val intents = listOf(
+        Intent("com.android.camera.action.REVIEW", uri),
+        Intent(Intent.ACTION_VIEW).setDataAndType(uri, "image/jpeg")
+    )
+    for (intent in intents) {
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            return
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No app for ${intent.action}", e)
+        }
+    }
+    Toast.makeText(context, R.string.no_gallery_app, Toast.LENGTH_LONG).show()
+}
+
 // Don't use the volume buttons as a shutter button: people need them to turn the volume
 // back up when the volume overlay shows, and the moo needs the volume anyway.
 @Composable
@@ -344,6 +453,8 @@ private fun PreviewCameraScreen() {
             timerState = TimerState.Counting(12),
             isVolumeTooLow = false,
             isPrivateOutputConnected = false,
+            lastPhotoUri = null,
+            onGalleryButtonTap = {},
         )
     }
 }
@@ -361,6 +472,8 @@ private fun PreviewCameraScreenLoading() {
             timerState = TimerState.Idle,
             isVolumeTooLow = false,
             isPrivateOutputConnected = false,
+            lastPhotoUri = null,
+            onGalleryButtonTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -379,6 +492,8 @@ private fun PreviewCameraScreenError() {
             timerState = TimerState.Idle,
             isVolumeTooLow = false,
             isPrivateOutputConnected = false,
+            lastPhotoUri = null,
+            onGalleryButtonTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -396,6 +511,8 @@ private fun PreviewCameraScreenVolumeTooLow() {
             timerState = TimerState.Idle,
             isVolumeTooLow = true,
             isPrivateOutputConnected = false,
+            lastPhotoUri = null,
+            onGalleryButtonTap = {},
         )
     }
 }
@@ -413,6 +530,8 @@ private fun PreviewCameraScreenPrivateOutput() {
             timerState = TimerState.Idle,
             isVolumeTooLow = false,
             isPrivateOutputConnected = true,
+            lastPhotoUri = null,
+            onGalleryButtonTap = {},
         )
     }
 }
