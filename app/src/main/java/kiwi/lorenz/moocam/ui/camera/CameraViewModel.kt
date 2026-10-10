@@ -28,6 +28,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.audio.SoundRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +41,8 @@ import androidx.annotation.OptIn as OptIn1
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val soundRepository: SoundRepository
 ) : ViewModel() {
 
     private val _cameraState = MutableStateFlow<CameraScreenState>(CameraScreenState.Loading)
@@ -183,9 +186,10 @@ class CameraViewModel @Inject constructor(
         countdownJob = viewModelScope.launch {
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
-                if (i == 2) playMooSound()
+                if (i == 2) soundRepository.playAnimalSound(AnimalSound.MOO)
                 delay(1000L)
             }
+            soundRepository.playShutter()
             _timerState.value = TimerState.Capturing
             takePhoto(
                 onPhotoSaved = onPhotoSaved,
@@ -193,13 +197,6 @@ class CameraViewModel @Inject constructor(
                     _timerState.value = TimerState.Idle 
                 }
             )
-        }
-    }
-
-    private fun playMooSound() {
-        MediaPlayer.create(context, R.raw.moo_1)?.apply {
-            setOnCompletionListener { release() }
-            start()
         }
     }
 
