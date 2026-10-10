@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -59,6 +60,11 @@ class CameraViewModel @Inject constructor(
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
+    private var camera: Camera? = null
+
+    // Null until the camera is bound
+    private val _zoom = MutableStateFlow<ZoomUiState?>(null)
+    val zoom = _zoom.asStateFlow()
 
     val delays = arrayOf(5, 7, 10, 15) // hard coded on purpose
     private val defaultDelay = 10
@@ -134,17 +140,38 @@ class CameraViewModel @Inject constructor(
                 imageCapture = ImageCapture.Builder()
                     .setResolutionSelector(resolutionSelector)
                     .build()
-                cameraProvider?.bindToLifecycle(
+                val camera = cameraProvider!!.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
                     cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
                     imageCapture, preview
                 )
+                this.camera = camera
+                // Replace the observer of an earlier bind instead of adding a second one
+                camera.cameraInfo.zoomState.removeObservers(lifecycleOwner)
+                camera.cameraInfo.zoomState.observe(lifecycleOwner) { state ->
+                    // Zoom buttons are a nice-to-have; never let them break the camera
+                    val presets = runCatching {
+                        zoomPresets(camera.cameraInfo, state.minZoomRatio, state.maxZoomRatio)
+                    }.getOrElse { e ->
+                        Log.w(TAG, "Could not work out zoom presets", e)
+                        listOf(1f)
+                    }
+                    _zoom.value = ZoomUiState(
+                        presets = presets,
+                        zoomRatio = state.zoomRatio
+                    )
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize camera", e)
                 _cameraState.value =
                     CameraScreenState.Error(e.message ?: "Unable to initialize camera")
             }
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
+    }
+
+    fun setZoom(ratio: Float) {
+        // The returned future only fails if a newer zoom replaces this one, which is fine
+        camera?.cameraControl?.setZoomRatio(ratio)
     }
 
     @OptIn1(ExperimentalCamera2Interop::class)

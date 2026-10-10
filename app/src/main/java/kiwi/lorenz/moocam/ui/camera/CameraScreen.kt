@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.camera.core.AspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -117,6 +118,7 @@ fun CameraScreen(
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val lastPhotoUri by viewModel.lastPhotoUri.collectAsStateWithLifecycle()
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
+    val zoom by viewModel.zoom.collectAsStateWithLifecycle()
     var showSoundPicker by rememberSaveable { mutableStateOf(false) }
 
     CameraScreenContent(
@@ -133,7 +135,9 @@ fun CameraScreen(
         lastPhotoUri = lastPhotoUri,
         onGalleryButtonTap = { uri -> openInGallery(context, uri) },
         selectedSound = selectedSound,
-        onSoundLabelTap = { showSoundPicker = true }
+        onSoundLabelTap = { showSoundPicker = true },
+        zoom = zoom,
+        onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) }
     )
 
     if (showSoundPicker) {
@@ -164,6 +168,8 @@ private fun CameraScreenContent(
     onGalleryButtonTap: (Uri) -> Unit,
     selectedSound: AnimalSound,
     onSoundLabelTap: () -> Unit,
+    zoom: ZoomUiState?,
+    onZoomPresetTap: (Float) -> Unit,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
@@ -172,20 +178,30 @@ private fun CameraScreenContent(
             .fillMaxSize()
             .background(Color.Black)
             .statusBarsPadding()) {
-            val soundLabel = @Composable {
+            // Drawn on top of the viewfinder
+            val viewfinderOverlay: @Composable BoxScope.() -> Unit = {
                 SoundLabel(
                     sound = selectedSound,
                     enabled = timerState is TimerState.Idle,
                     onClick = onSoundLabelTap,
                     modifier = Modifier.padding(spacing.medium)
                 )
+                zoom?.let {
+                    ZoomPresetRow(
+                        zoom = it,
+                        onPresetTap = onZoomPresetTap,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(spacing.medium)
+                    )
+                }
             }
             if (showFakeViewfinder) {
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(3f / 4f)
                     .background(Color.Yellow)) {
-                    soundLabel()
+                    viewfinderOverlay()
                 }
             } else {
                 when (cameraState) {
@@ -198,7 +214,7 @@ private fun CameraScreenContent(
                                     .fillMaxWidth()
                                     .aspectRatio(previewRatio)
                             )
-                            soundLabel()
+                            viewfinderOverlay()
                         }
                     }
                     // Loading and Error fill the whole screen on purpose: this pushes the
@@ -489,6 +505,8 @@ private fun PreviewCameraScreen() {
             onGalleryButtonTap = {},
             selectedSound = AnimalSound.MOO,
             onSoundLabelTap = {},
+            zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
+            onZoomPresetTap = {},
         )
     }
 }
@@ -510,6 +528,8 @@ private fun PreviewCameraScreenLoading() {
             onGalleryButtonTap = {},
             selectedSound = AnimalSound.MOO,
             onSoundLabelTap = {},
+            zoom = null,
+            onZoomPresetTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -532,6 +552,8 @@ private fun PreviewCameraScreenError() {
             onGalleryButtonTap = {},
             selectedSound = AnimalSound.MOO,
             onSoundLabelTap = {},
+            zoom = null,
+            onZoomPresetTap = {},
             showFakeViewfinder = false,
         )
     }
@@ -553,6 +575,8 @@ private fun PreviewCameraScreenVolumeTooLow() {
             onGalleryButtonTap = {},
             selectedSound = AnimalSound.MOO,
             onSoundLabelTap = {},
+            zoom = null,
+            onZoomPresetTap = {},
         )
     }
 }
@@ -574,6 +598,8 @@ private fun PreviewCameraScreenPrivateOutput() {
             onGalleryButtonTap = {},
             selectedSound = AnimalSound.MOO,
             onSoundLabelTap = {},
+            zoom = null,
+            onZoomPresetTap = {},
         )
     }
 }
