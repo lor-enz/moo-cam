@@ -3,7 +3,6 @@ package kiwi.lorenz.moocam.ui.camera
 import android.content.ContentValues
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
@@ -157,9 +156,7 @@ class CameraViewModel @Inject constructor(
             val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
             put(MediaStore.MediaColumns.DISPLAY_NAME, "MOO_$timestamp.jpg")
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-            }
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
         }
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(

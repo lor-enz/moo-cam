@@ -3,17 +3,14 @@
 
     <string name="permission_first_title">MooCam needs to see to moo</string>
     <string name="permission_first_subtext">Camera access is required to take photos</string>
-    <string name="permission_first_subtext_with_storage">Camera access is required to take photos, and storage access to save them</string>
     <string name="permission_first_button_allow">Allow Camera</string>
 
     <string name="permission_sec_title">The cow is still blind</string>
     <string name="permission_sec_subtext">You denied camera access — want to try again?</string>
-    <string name="permission_sec_subtext_with_storage">You denied camera or storage access — want to try again?</string>
     <string name="permission_sec_button_allow">Ask Again</string>
 
     <string name="permission_denied_title">The cow can\'t see anything</string>
     <string name="permission_denied_subtext">Camera access was permanently denied. You\'ll need to enable it in Settings</string>
-    <string name="permission_denied_subtext_with_storage">Camera or storage access was permanently denied. You\'ll need to enable it in Settings</string>
     <string name="permission_denied_button">Open settings</string>
 
     <string name="camera_start_failed">Could not start camera: %1$s</string>
