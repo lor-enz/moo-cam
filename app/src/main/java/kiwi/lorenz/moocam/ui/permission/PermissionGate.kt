@@ -18,9 +18,11 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kiwi.lorenz.moocam.R
 
 // Android 9 and below need storage permission to save photos to MediaStore
+private val needsStoragePermission = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
+
 private val requiredPermissions = buildList {
     add(Manifest.permission.CAMERA)
-    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+    if (needsStoragePermission) {
         add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 }
@@ -49,7 +51,10 @@ fun PermissionGate(
         !askedBefore -> {
             PermissionExplainerContent(
                 headline = stringResource(R.string.permission_first_title),
-                subText = stringResource(R.string.permission_first_subtext),
+                subText = stringResource(
+                    if (needsStoragePermission) R.string.permission_first_subtext_with_storage
+                    else R.string.permission_first_subtext
+                ),
                 buttonLabel = stringResource(R.string.permission_first_button_allow),
                 onButtonClick = {
                     permissionsState.launchMultiplePermissionRequest()
@@ -60,7 +65,10 @@ fun PermissionGate(
         permissionsState.shouldShowRationale -> {
             PermissionExplainerContent(
                 headline = stringResource(R.string.permission_sec_title),
-                subText = stringResource(R.string.permission_sec_subtext),
+                subText = stringResource(
+                    if (needsStoragePermission) R.string.permission_sec_subtext_with_storage
+                    else R.string.permission_sec_subtext
+                ),
                 buttonLabel = stringResource(R.string.permission_sec_button_allow),
                 onButtonClick = {
                     permissionsState.launchMultiplePermissionRequest()
@@ -71,7 +79,10 @@ fun PermissionGate(
         else -> {
             PermissionExplainerContent(
                 headline = stringResource(R.string.permission_denied_title),
-                subText = stringResource(R.string.permission_denied_subtext),
+                subText = stringResource(
+                    if (needsStoragePermission) R.string.permission_denied_subtext_with_storage
+                    else R.string.permission_denied_subtext
+                ),
                 buttonLabel = stringResource(R.string.permission_denied_button),
                 onButtonClick = {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
