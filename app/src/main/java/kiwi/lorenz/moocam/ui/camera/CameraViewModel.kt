@@ -183,6 +183,11 @@ class CameraViewModel @Inject constructor(
         _selectedDelay.value = newDelay
     }
 
+    // Called when the screen stops, so no sound or capture fires while the app is in the background
+    fun cancelCountdown() {
+        if (_timerState.value is TimerState.Counting) stopCountdown()
+    }
+
     private fun stopCountdown() {
         countdownJob?.cancel()
         _timerState.value = TimerState.Idle
