@@ -34,10 +34,15 @@ import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.audio.AudioOutputMonitor
 import kiwi.lorenz.moocam.audio.SoundRepository
+import kiwi.lorenz.moocam.capture.CaptureMode
 import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +53,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import kotlin.math.abs
 import javax.inject.Inject
 import androidx.annotation.OptIn as OptIn1
@@ -118,6 +124,15 @@ class CameraViewModel @Inject constructor(
 
     // A flash played from the picker, replaced when the next one is tapped
     private var flashPreviewJob: Job? = null
+
+    val captureModes = CaptureMode.entries
+    val captureMode = settingsRepository.captureMode
+        .map { it ?: CaptureMode.SINGLE }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, CaptureMode.SINGLE)
+
+    // Time between the photos of a burst. If the phone saves photos more slowly, CameraX
+    // queues them, so the burst just takes a bit longer.
+    private val burstIntervalMillis = 300L
 
     // Last photo taken in this session, shown in the gallery button
     private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
@@ -244,8 +259,10 @@ class CameraViewModel @Inject constructor(
     }
 
     // CameraX drops the focus lock when the camera closes, e.g. when the app goes to the background
+    // A burst that is still running stops too: its remaining photos would fail without a camera.
     fun onCameraStopped() {
         _isFocusLocked.value = false
+        if (_timerState.value is TimerState.Capturing) countdownJob?.cancel()
     }
 
     @OptIn1(ExperimentalCamera2Interop::class)
@@ -265,16 +282,12 @@ class CameraViewModel @Inject constructor(
             AspectRatio.RATIO_16_9
     }
 
-    private fun takePhoto(onCaptureFinished: () -> Unit) {
-        val imageCapture = imageCapture ?: run {
-            _events.trySend(CameraEvent.CaptureFailed)
-            onCaptureFinished()
-            return
-        }
+    // Returns whether the photo was saved
+    private suspend fun takePhoto(displayName: String): Boolean {
+        val imageCapture = imageCapture ?: return false
 
         val contentValues = ContentValues().apply {
-            val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "MOO_$timestamp.jpg")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             // DCIM is where camera apps store photos; galleries show MooCam as its own album
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_DCIM}/MooCam")
@@ -286,23 +299,42 @@ class CameraViewModel @Inject constructor(
             contentValues
         ).build()
 
-        imageCapture.takePicture(
-            outputOptions,
-            ContextCompat.getMainExecutor(context),
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onError(error: ImageCaptureException) {
-                    Log.e(TAG, "Photo capture failed: ${error.message}", error)
-                    _events.trySend(CameraEvent.CaptureFailed)
-                    onCaptureFinished()
-                }
+        // A started capture can't be cancelled; it still saves the photo if the caller stops waiting
+        return suspendCancellableCoroutine { continuation ->
+            imageCapture.takePicture(
+                outputOptions,
+                ContextCompat.getMainExecutor(context),
+                object : ImageCapture.OnImageSavedCallback {
+                    override fun onError(error: ImageCaptureException) {
+                        Log.e(TAG, "Photo capture failed: ${error.message}", error)
+                        if (continuation.isActive) continuation.resume(false)
+                    }
 
-                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    _lastPhotoUri.value = outputFileResults.savedUri
-                    _events.trySend(CameraEvent.PhotoSaved)
-                    onCaptureFinished()
+                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        _lastPhotoUri.value = outputFileResults.savedUri
+                        _events.trySend(CameraEvent.PhotoSaved)
+                        if (continuation.isActive) continuation.resume(true)
+                    }
                 }
-            }
-        )
+            )
+        }
+    }
+
+    // Takes one photo, or a burst spaced burstIntervalMillis apart. Each photo is started
+    // without waiting for the previous one to be saved, to keep the burst fast.
+    private suspend fun takePhotos(mode: CaptureMode) {
+        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val allSaved = coroutineScope {
+            (1..mode.photoCount).map { number ->
+                if (number > 1) delay(burstIntervalMillis)
+                soundRepository.playShutter()
+                // Burst photos share the timestamp and are numbered, so they sort together
+                val name = if (mode.photoCount == 1) "MOO_$timestamp.jpg" else "MOO_${timestamp}_$number.jpg"
+                async { takePhoto(name) }
+            }.awaitAll().all { it }
+        }
+        // One message for the whole burst, not one per failed photo
+        if (!allSaved) _events.trySend(CameraEvent.CaptureFailed)
     }
 
     // The photo may have been deleted in the gallery app meanwhile; then go back to the placeholder
@@ -351,6 +383,10 @@ class CameraViewModel @Inject constructor(
                 .also { lastSurpriseSound = it }
         }
         soundRepository.playAnimalSound(sound)
+    }
+
+    fun setCaptureMode(mode: CaptureMode) {
+        viewModelScope.launch { settingsRepository.setCaptureMode(mode) }
     }
 
     fun setFlash(flash: AttentionFlash) {
@@ -409,13 +445,12 @@ class CameraViewModel @Inject constructor(
                 }
                 delay(1000L)
             }
-            soundRepository.playShutter()
             _timerState.value = TimerState.Capturing
-            takePhoto(
-                onCaptureFinished = {
-                    _timerState.value = TimerState.Idle 
-                }
-            )
+            try {
+                takePhotos(captureMode.value)
+            } finally {
+                _timerState.value = TimerState.Idle
+            }
         }
     }
 

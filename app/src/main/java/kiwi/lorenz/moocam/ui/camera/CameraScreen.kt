@@ -66,6 +66,8 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -78,6 +80,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
+import kiwi.lorenz.moocam.capture.CaptureMode
 import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppTheme
@@ -147,6 +150,8 @@ fun CameraScreen(
     val selectedFlash by viewModel.selectedFlash.collectAsStateWithLifecycle()
     var showSoundPicker by rememberSaveable { mutableStateOf(false) }
     var showFlashPicker by rememberSaveable { mutableStateOf(false) }
+    val captureMode by viewModel.captureMode.collectAsStateWithLifecycle()
+    var showCaptureModePicker by rememberSaveable { mutableStateOf(false) }
 
     CameraScreenContent(
         onCaptureButtonTap = {
@@ -165,6 +170,8 @@ fun CameraScreen(
         onSoundLabelTap = { showSoundPicker = true },
         selectedFlash = selectedFlash.takeIf { hasFlashUnit },
         onFlashLabelTap = { showFlashPicker = true },
+        captureMode = captureMode,
+        onCaptureModeTap = { showCaptureModePicker = true },
         zoom = zoom,
         onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
         onTapToFocus = { point -> viewModel.focusOn(point) },
@@ -200,6 +207,23 @@ fun CameraScreen(
                 showFlashPicker = false
             },
             onDismiss = { showFlashPicker = false }
+        )
+    }
+
+    if (showCaptureModePicker) {
+        OptionPickerDialog(
+            title = stringResource(R.string.choose_capture_mode),
+            options = viewModel.captureModes,
+            selectedOption = captureMode,
+            label = { it.displayName },
+            icon = { it.iconRes },
+            // Nothing to preview; tapping only selects
+            onOptionTap = {},
+            onConfirm = { mode ->
+                viewModel.setCaptureMode(mode)
+                showCaptureModePicker = false
+            },
+            onDismiss = { showCaptureModePicker = false }
         )
     }
 }
@@ -269,6 +293,8 @@ private fun CameraScreenContent(
     // Null hides the flash chip, for phones without a flashlight
     selectedFlash: AttentionFlash?,
     onFlashLabelTap: () -> Unit,
+    captureMode: CaptureMode,
+    onCaptureModeTap: () -> Unit,
     zoom: ZoomUiState?,
     onZoomPresetTap: (Float) -> Unit,
     onTapToFocus: (MeteringPoint) -> Unit,
@@ -401,7 +427,13 @@ private fun CameraScreenContent(
                         onClick = onCaptureButtonTap,
                         timerState = timerState,
                     )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        CaptureModeButton(
+                            mode = captureMode,
+                            enabled = timerState is TimerState.Idle,
+                            onClick = onCaptureModeTap
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(spacing.large))
@@ -532,6 +564,46 @@ private fun GalleryButton(
     }
 }
 
+// Shows how many photos one countdown takes; tapping it opens the picker.
+// Styled like the gallery button, so the capture button sits between two matching circles.
+@Composable
+private fun CaptureModeButton(
+    mode: CaptureMode,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .size(56.dp)
+            .alpha(if (enabled) 1f else 0.4f)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.1f))
+            .border(2.dp, colorResource(R.color.off_white), CircleShape)
+            .clickable(
+                enabled = enabled,
+                onClickLabel = stringResource(R.string.choose_capture_mode),
+                role = Role.Button,
+                onClick = onClick
+            )
+            .semantics(mergeDescendants = true) { contentDescription = mode.displayName },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            painter = painterResource(mode.iconRes),
+            contentDescription = null,
+            tint = colorResource(R.color.off_white),
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = mode.photoCount.toString(),
+            style = AppTheme.typography.bodyMedium,
+            color = colorResource(R.color.off_white)
+        )
+    }
+}
+
 // Prefer the camera roll review intent (lets you swipe through photos in e.g. Google Photos),
 // fall back to a plain image viewer
 private fun openInGallery(context: Context, uri: Uri) {
@@ -626,6 +698,8 @@ private fun PreviewCameraScreen() {
             onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
             onFlashLabelTap = {},
+            captureMode = CaptureMode.BURST_3,
+            onCaptureModeTap = {},
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -652,6 +726,8 @@ private fun PreviewCameraScreenLoading() {
             onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
             onFlashLabelTap = {},
+            captureMode = CaptureMode.BURST_3,
+            onCaptureModeTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -679,6 +755,8 @@ private fun PreviewCameraScreenError() {
             onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
             onFlashLabelTap = {},
+            captureMode = CaptureMode.BURST_3,
+            onCaptureModeTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -705,6 +783,8 @@ private fun PreviewCameraScreenVolumeTooLow() {
             onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
             onFlashLabelTap = {},
+            captureMode = CaptureMode.BURST_3,
+            onCaptureModeTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -731,6 +811,8 @@ private fun PreviewCameraScreenPrivateOutput() {
             onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
             onFlashLabelTap = {},
+            captureMode = CaptureMode.BURST_3,
+            onCaptureModeTap = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},

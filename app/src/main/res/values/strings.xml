@@ -23,6 +23,7 @@
     <string name="photo_capture_failed">Oops, the photo could not be saved</string>
     <string name="choose_sound">Choose a sound</string>
     <string name="choose_flash">Choose an attention flash</string>
+    <string name="choose_capture_mode">Single photo or burst</string>
 
 
 </resources>
