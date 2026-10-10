@@ -3,7 +3,10 @@ package kiwi.lorenz.moocam.ui.camera
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.Size
 import android.view.OrientationEventListener
@@ -100,6 +103,7 @@ fun CameraScreen(
         viewModel.refreshLastPhoto()
     }
     DeviceRotationEffect(onRotationChange = viewModel::setDeviceRotation)
+    DisplayRotationEffect(onRotationChange = viewModel::setDisplayRotation)
 
     // The phone often waits on a shelf or tripod for the right moment; if the screen turned
     // off, the app would go to the background and stop the camera
@@ -199,6 +203,27 @@ private fun DeviceRotationEffect(onRotationChange: (Int) -> Unit) {
         }
         listener.enable()
         onStopOrDispose { listener.disable() }
+    }
+}
+
+// Reports the rotation of the display this screen is on. A display listener, because turning
+// the device by 180° rotates the display without a configuration change.
+@Composable
+private fun DisplayRotationEffect(onRotationChange: (Int) -> Unit) {
+    val view = LocalView.current
+    val currentOnRotationChange by rememberUpdatedState(onRotationChange)
+    DisposableEffect(view) {
+        val displayManager = view.context.getSystemService(DisplayManager::class.java)
+        val listener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+            override fun onDisplayRemoved(displayId: Int) {}
+            override fun onDisplayChanged(displayId: Int) {
+                val display = view.display ?: return
+                if (displayId == display.displayId) currentOnRotationChange(display.rotation)
+            }
+        }
+        displayManager.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
+        onDispose { displayManager.unregisterDisplayListener(listener) }
     }
 }
 

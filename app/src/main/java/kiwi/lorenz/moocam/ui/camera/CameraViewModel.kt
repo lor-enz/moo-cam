@@ -65,6 +65,7 @@ class CameraViewModel @Inject constructor(
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
+    private var preview: Preview? = null
 
     // How the device is held, as a Surface.ROTATION_* value. The UI stays in portrait,
     // but photos taken in landscape must still be saved upright.
@@ -168,6 +169,7 @@ class CameraViewModel @Inject constructor(
                     imageCapture, preview
                 )
                 this.camera = camera
+                this.preview = preview
                 // Replace the observer of an earlier bind instead of adding a second one
                 camera.cameraInfo.zoomState.removeObservers(lifecycleOwner)
                 camera.cameraInfo.zoomState.observe(lifecycleOwner) { state ->
@@ -215,6 +217,12 @@ class CameraViewModel @Inject constructor(
     fun setDeviceRotation(rotation: Int) {
         deviceRotation = rotation
         imageCapture?.targetRotation = rotation
+    }
+
+    // The activity isn't recreated when the display rotates (only possible on large screens,
+    // where Android ignores the portrait lock), so the viewfinder has to be told directly
+    fun setDisplayRotation(rotation: Int) {
+        preview?.targetRotation = rotation
     }
 
     // CameraX drops the focus lock when the camera closes, e.g. when the app goes to the background
