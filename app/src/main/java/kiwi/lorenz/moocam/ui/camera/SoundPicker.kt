@@ -1,6 +1,7 @@
 package kiwi.lorenz.moocam.ui.camera
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,8 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -120,29 +120,40 @@ private fun SoundPickerContent(
             color = colorResource(R.color.dark_charcoal)
         )
         Spacer(Modifier.height(spacing.medium))
-        Column(modifier = Modifier.selectableGroup()) {
+        Column(
+            modifier = Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(spacing.extraSmall)
+        ) {
             sounds.forEach { sound ->
+                val isSelected = sound == pendingSound
+                val shape = RoundedCornerShape(12.dp)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(56.dp)
+                        .clip(shape)
+                        // Unselected rows get an invisible border, so nothing shifts on selection
+                        .border(
+                            width = 2.dp,
+                            color = if (isSelected) colorResource(R.color.kiwi_green) else Color.Transparent,
+                            shape = shape
+                        )
                         .selectable(
-                            selected = sound == pendingSound,
+                            selected = isSelected,
                             role = Role.RadioButton,
                             onClick = {
                                 pendingSound = sound
                                 onSoundTap(sound)
                             }
-                        ),
+                        )
+                        .padding(horizontal = spacing.medium),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(
-                        selected = sound == pendingSound,
-                        onClick = null,
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = colorResource(R.color.kiwi_green),
-                            unselectedColor = colorResource(R.color.dark_charcoal)
-                        )
+                    Icon(
+                        painter = painterResource(sound.iconRes),
+                        contentDescription = null,
+                        tint = colorResource(R.color.dark_charcoal),
+                        modifier = Modifier.size(28.dp)
                     )
                     Spacer(Modifier.width(spacing.medium))
                     Text(
