@@ -16,6 +16,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.MeteringPoint
 import androidx.compose.foundation.layout.Arrangement
@@ -302,6 +303,9 @@ private fun CameraScreenContent(
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
+    // Debug only: long-pressing the capture mode button toggles a stock photo in the viewfinder,
+    // for store listing screenshots
+    var showStockPhoto by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier
             .fillMaxSize()
@@ -359,6 +363,14 @@ private fun CameraScreenContent(
                                     .fillMaxWidth()
                                     .aspectRatio(previewRatio)
                             )
+                            if (showStockPhoto && stockViewfinderPhoto != null) {
+                                Image(
+                                    painter = painterResource(stockViewfinderPhoto),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.matchParentSize()
+                                )
+                            }
                             viewfinderOverlay()
                         }
                     }
@@ -431,7 +443,8 @@ private fun CameraScreenContent(
                         CaptureModeButton(
                             mode = captureMode,
                             enabled = timerState is TimerState.Idle,
-                            onClick = onCaptureModeTap
+                            onClick = onCaptureModeTap,
+                            onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } }
                         )
                     }
                 }
@@ -571,6 +584,8 @@ private fun CaptureModeButton(
     mode: CaptureMode,
     enabled: Boolean,
     onClick: () -> Unit,
+    // Null disables the long press
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -580,10 +595,11 @@ private fun CaptureModeButton(
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.1f))
             .border(2.dp, colorResource(R.color.off_white), CircleShape)
-            .clickable(
+            .combinedClickable(
                 enabled = enabled,
                 onClickLabel = stringResource(R.string.choose_capture_mode),
                 role = Role.Button,
+                onLongClick = onLongClick,
                 onClick = onClick
             )
             .semantics(mergeDescendants = true) { contentDescription = mode.displayName },
