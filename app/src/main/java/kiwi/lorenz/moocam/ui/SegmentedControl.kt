@@ -196,7 +196,7 @@ private fun PreviewSegmentedControl() {
 @Preview
 @Composable
 private fun PreviewSegmentedControl2() {
-    val items = listOf("5 s", "7 s", "10 s", "15 s")
+    val items = listOf("2 s", "5 s", "7 s", "10 s", "15 s")
     var selectedItem by remember { mutableStateOf(items[1]) }
 
     MaterialTheme {

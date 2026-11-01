@@ -703,7 +703,7 @@ private fun PreviewCameraScreen() {
         CameraScreenContent(
             onCaptureButtonTap = {},
             cameraState = CameraScreenState.Loading,
-            delays = arrayOf(5, 7, 10, 15),
+            delays = arrayOf(2, 5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Counting(12),
@@ -731,7 +731,7 @@ private fun PreviewCameraScreenLoading() {
         CameraScreenContent(
             onCaptureButtonTap = {},
             cameraState = CameraScreenState.Loading,
-            delays = arrayOf(5, 7, 10, 15),
+            delays = arrayOf(2, 5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,
@@ -760,7 +760,7 @@ private fun PreviewCameraScreenError() {
         CameraScreenContent(
             onCaptureButtonTap = {},
             cameraState = CameraScreenState.Error("No back camera found"),
-            delays = arrayOf(5, 7, 10, 15),
+            delays = arrayOf(2, 5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,
@@ -788,7 +788,7 @@ private fun PreviewCameraScreenVolumeTooLow() {
         CameraScreenContent(
             onCaptureButtonTap = {},
             cameraState = CameraScreenState.Loading,
-            delays = arrayOf(5, 7, 10, 15),
+            delays = arrayOf(2, 5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,
@@ -816,7 +816,7 @@ private fun PreviewCameraScreenPrivateOutput() {
         CameraScreenContent(
             onCaptureButtonTap = {},
             cameraState = CameraScreenState.Loading,
-            delays = arrayOf(5, 7, 10, 15),
+            delays = arrayOf(2, 5, 7, 10, 15),
             selectedDelay = 7,
             onDelayChange = {},
             timerState = TimerState.Idle,

@@ -86,7 +86,8 @@ class CameraViewModel @Inject constructor(
     private val _zoom = MutableStateFlow<ZoomUiState?>(null)
     val zoom = _zoom.asStateFlow()
 
-    val delays = arrayOf(5, 7, 10, 15) // hard coded on purpose
+    // Hard coded on purpose. 2 is the shortest that works: the sound plays with 2 seconds left.
+    val delays = arrayOf(2, 5, 7, 10, 15)
     private val defaultDelay = 10
 
     // Eagerly, so the saved value is already loaded when the countdown reads it.
