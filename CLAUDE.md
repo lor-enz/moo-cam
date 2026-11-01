@@ -7,11 +7,34 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 ## How to work here
 
 - Commit messages use [gitmoji](https://gitmoji.dev). Follow the rules in [`gitmoji.md`](gitmoji.md) for every commit: exactly one gitmoji from its list, an imperative subject of at most 72 characters, one logical change per commit.
-- Don't add Claude as co-author or any other AI attribution to commit messages.
+- Commit only when the user asks. Propose the split first; every commit must build and pass the unit tests on its own.
+- Work in milestones. After each one: build, run the unit tests, test the UI on the emulator, then report to the user, who tests on a real phone (see Testing).
 - Keep permissions to the minimum the app needs. Don't add broad ones like `READ_MEDIA_IMAGES` just to improve a feature; e.g. the gallery button only shows photos taken in the current session on purpose.
+- Packages are by feature: `audio` (animal sounds, audio output), `flash` (the blinking flashlight), `capture` (capture modes), `settings` (stored choices). Screens live in `ui/<screen>` (`camera`, `permission`) with their view models; `ui` itself holds only what several screens share (`SegmentedControl`, `theme`). `di` holds the Hilt modules. Put a new file in the package of its feature, or propose a new one when it fits none.
+- Check the package of every file you touch: a file used by only one feature belongs in that feature's package, one used by several goes up to `ui`. If a move is advised, ask the user first, and move in a `🚚` commit of its own (moves only, so blame follows the rename).
+- Give new UI elements a test tag in the same change that adds them, so they can be driven by adb (see Testing). There are none yet: the first one creates `ui/TestTags.kt` and sets `testTagsAsResourceId` at the root.
+- Record decisions and findings under Project notes as they come up, and update this file and the readme in the commit they belong to, not in a separate one. Keep entries short and remove ones that no longer apply, so this file stays small.
 
 ## Testing
 
-- Check that the app builds with `./gradlew :app:assembleDebug`. There are no meaningful automated tests yet.
-- A passing build doesn't prove a change works. For anything the user can see or hear (camera, sounds, permissions, UI), ask the user to verify it on their real device and say what to check.
-- Only consider a change tested once the user confirms it. If they don't respond to that, treat it as untested; never assume it works.
+- Check that the app builds with `./gradlew :app:assembleDebug`.
+- Unit tests run on the JVM with `./gradlew :app:testDebugUnitTest`. There are only the template's examples so far; add tests when changing logic that runs without a device (e.g. `CameraViewModel`, `SettingsRepository`, `SoundRepository`).
+- The emulator is for the UI: layout, the permission screens, pickers and settings, the countdown. Its camera shows a fake scene, so leave to the user what needs real hardware: photo quality, when the sound plays relative to the photo, the flashlight, speaker vs. headphones. Tell them what to check.
+- Only consider such a change tested once the user confirms it. If they don't respond to that, treat it as untested; never assume it works.
+- Use only an already running emulator (`Emu_Pixel_9a_No_Google`, Android 16, for everyday testing). If none is running or it misbehaves (hanging installs, very slow responses, unresponsive adb), stop and tell the user instead of waiting or working around it. Only one runs at a time; ask the user if a test needs another.
+- Only test on the emulator unless the user says otherwise; their own phone may be connected via adb too.
+- Helpers in `scripts/test/` use the running emulator, never a connected phone unless `ANDROID_SERIAL` names it. Install with `install.sh`, not `./gradlew installDebug`, which installs on every connected device.
+  - `prepare-device.sh` turns animations off, which keeps screenshots stable. Run it before testing; an emulator booted from an older snapshot has them on again.
+  - `ui.sh list|tap|hold|text|type|wait|back|home|shot` reads and drives the screen through `uiautomator`, finding elements by test tag, text or description.
+
+## Project notes
+
+None yet.
+
+## Known issues
+
+None yet.
+
+## Planned changes
+
+None yet.
