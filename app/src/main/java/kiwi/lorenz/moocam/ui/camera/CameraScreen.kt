@@ -16,7 +16,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.MeteringPoint
 import androidx.compose.foundation.layout.Arrangement
@@ -303,7 +302,7 @@ private fun CameraScreenContent(
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
-    // Debug only: long-pressing the capture mode button toggles a stock photo in the viewfinder,
+    // Debug only: long-pressing the capture mode chip toggles a stock photo in the viewfinder,
     // for store listing screenshots
     var showStockPhoto by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
@@ -333,6 +332,19 @@ private fun CameraScreenContent(
                             .padding(spacing.medium)
                     )
                 }
+                // Shows the photo count, not the mode's name, to leave room for the zoom presets
+                ViewfinderChip(
+                    iconRes = captureMode.iconRes,
+                    text = captureMode.photoCount.toString(),
+                    onClickLabel = stringResource(R.string.choose_capture_mode),
+                    enabled = timerState is TimerState.Idle,
+                    onClick = onCaptureModeTap,
+                    onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(spacing.medium)
+                        .semantics { contentDescription = captureMode.displayName }
+                )
                 zoom?.let {
                     ZoomPresetRow(
                         zoom = it,
@@ -440,14 +452,7 @@ private fun CameraScreenContent(
                         onClick = onCaptureButtonTap,
                         timerState = timerState,
                     )
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        CaptureModeButton(
-                            mode = captureMode,
-                            enabled = timerState is TimerState.Idle,
-                            onClick = onCaptureModeTap,
-                            onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } }
-                        )
-                    }
+                    Spacer(Modifier.weight(1f))
                 }
 
                 Spacer(Modifier.height(spacing.large))
@@ -575,49 +580,6 @@ private fun GalleryButton(
                 modifier = Modifier.size(28.dp)
             )
         }
-    }
-}
-
-// Shows how many photos one countdown takes; tapping it opens the picker.
-// Styled like the gallery button, so the capture button sits between two matching circles.
-@Composable
-private fun CaptureModeButton(
-    mode: CaptureMode,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    // Null disables the long press
-    onLongClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .size(56.dp)
-            .alpha(if (enabled) 1f else 0.4f)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.1f))
-            .border(2.dp, colorResource(R.color.off_white), CircleShape)
-            .combinedClickable(
-                enabled = enabled,
-                onClickLabel = stringResource(R.string.choose_capture_mode),
-                role = Role.Button,
-                onLongClick = onLongClick,
-                onClick = onClick
-            )
-            .semantics(mergeDescendants = true) { contentDescription = mode.displayName },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            painter = painterResource(mode.iconRes),
-            contentDescription = null,
-            tint = colorResource(R.color.off_white),
-            modifier = Modifier.size(20.dp)
-        )
-        Text(
-            text = mode.photoCount.toString(),
-            style = AppTheme.typography.bodyMedium,
-            color = colorResource(R.color.off_white)
-        )
     }
 }
 

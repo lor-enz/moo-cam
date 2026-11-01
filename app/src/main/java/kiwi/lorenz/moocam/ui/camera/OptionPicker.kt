@@ -3,7 +3,7 @@ package kiwi.lorenz.moocam.ui.camera
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,16 +56,19 @@ fun ViewfinderChip(
     onClickLabel: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Null disables the long press
+    onLongClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.4f)
             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
-            .clickable(
+            .combinedClickable(
                 enabled = enabled,
                 onClickLabel = onClickLabel,
                 role = Role.Button,
+                onLongClick = onLongClick,
                 onClick = onClick
             )
             .padding(horizontal = spacing.medium, vertical = spacing.small),
