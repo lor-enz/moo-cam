@@ -51,6 +51,7 @@ fun <T> SegmentedControl(
     selectedItem: T,
     onItemSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
+    label: (T) -> String = { it.toString() },
     borderWidth: Dp = 1.dp,
     selectedBackgroundColor: Color = colorResource(R.color.kiwi_green),
     unselectedBackgroundColor: Color = colorResource(R.color.transparent),
@@ -132,7 +133,7 @@ fun <T> SegmentedControl(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = item.toString(),
+                            text = label(item),
                             color = textColor,
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,

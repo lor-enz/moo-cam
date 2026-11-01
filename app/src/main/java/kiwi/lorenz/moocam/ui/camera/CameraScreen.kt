@@ -415,6 +415,7 @@ private fun CameraScreenContent(
                     items = delays.toList(), // TODO arrays? list? think about this
                     selectedItem = selectedDelay,
                     onItemSelected = { i -> onDelayChange(i) },
+                    label = { seconds -> "$seconds s" },
                 )
                 Spacer(Modifier.height(spacing.large))
                 if (isPrivateOutputConnected) {
