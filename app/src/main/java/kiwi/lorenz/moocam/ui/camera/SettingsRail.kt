@@ -22,8 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
+import kiwi.lorenz.moocam.ui.theme.AppColors
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -77,8 +76,12 @@ fun SettingsRailButton(
     onLongClick: (() -> Unit)? = null
 ) {
     val background by animateColorAsState(
-        targetValue = if (isOpen) colorResource(R.color.kiwi_green) else Color.Black.copy(alpha = 0.75f),
+        targetValue = if (isOpen) AppColors.accent else AppColors.overlayBackground,
         label = "railButtonBackground"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isOpen) AppColors.onAccent else AppColors.onDark,
+        label = "railButtonContent"
     )
     Column(
         modifier = modifier
@@ -87,7 +90,7 @@ fun SettingsRailButton(
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
             .background(background)
-            .border(0.5.dp, colorResource(R.color.gray_button_border), CircleShape)
+            .border(0.5.dp, AppColors.outline, CircleShape)
             .combinedClickable(
                 enabled = enabled,
                 onClickLabel = onClickLabel,
@@ -102,13 +105,13 @@ fun SettingsRailButton(
         Icon(
             painter = painterResource(iconRes),
             contentDescription = null,
-            tint = colorResource(R.color.off_white),
+            tint = contentColor,
             modifier = Modifier.size(24.dp)
         )
         Text(
             text = caption,
             style = AppTheme.typography.labelSmall,
-            color = colorResource(R.color.off_white),
+            color = contentColor,
             maxLines = 1,
             // Shrinks with a large font size, where a long caption wouldn't fit the circle
             autoSize = TextAutoSize.StepBased(minFontSize = 5.sp, maxFontSize = 10.sp)

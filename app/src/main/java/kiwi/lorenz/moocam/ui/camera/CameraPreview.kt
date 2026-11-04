@@ -24,11 +24,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kiwi.lorenz.moocam.ui.theme.AppColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -110,6 +110,6 @@ private fun FocusCircle(position: Offset, tapCount: Int) {
                 scaleY = scale.value
                 this.alpha = alpha.value
             }
-            .border(2.dp, Color.White, CircleShape)
+            .border(2.dp, AppColors.onDark, CircleShape)
     )
 }

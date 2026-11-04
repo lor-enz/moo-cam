@@ -65,7 +65,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -88,6 +87,7 @@ import kiwi.lorenz.moocam.capture.CaptureMode
 import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.TestTags
+import kiwi.lorenz.moocam.ui.theme.AppColors
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -320,7 +320,7 @@ private fun CameraScreenContent(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(AppColors.cameraBackground)
             .statusBarsPadding()) {
             // Drawn on top of the viewfinder
             val viewfinderOverlay: @Composable BoxScope.() -> Unit = {
@@ -439,19 +439,19 @@ private fun CameraScreenContent(
                                 .fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = Color.White)
+                            CircularProgressIndicator(color = AppColors.onDark)
                         }
                     }
                     is CameraScreenState.Error -> {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.DarkGray),
+                                .background(AppColors.controlsBackground),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = stringResource(R.string.camera_start_failed, cameraState.message),
-                                color = Color.White,
+                                color = AppColors.onDark,
                                 modifier = Modifier.uprightPanel()
                             )
                         }
@@ -462,7 +462,7 @@ private fun CameraScreenContent(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(colorResource(R.color.dark_charcoal))
+                    .background(AppColors.controlsBackground)
                     .navigationBarsPadding(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -526,7 +526,7 @@ private fun VolumeTooLowOverlay() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(AppColors.scrim)
             // Swallow all touches so the camera can't be used without sound
             .clickable(interactionSource = null, indication = null, onClick = {}),
         contentAlignment = Alignment.Center
@@ -535,28 +535,28 @@ private fun VolumeTooLowOverlay() {
             modifier = Modifier
                 .uprightPanel()
                 .padding(spacing.large)
-                .background(colorResource(R.color.off_white), RoundedCornerShape(24.dp))
+                .background(AppColors.panel, RoundedCornerShape(24.dp))
                 .padding(spacing.large),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 painter = painterResource(R.drawable.volume_plus),
                 contentDescription = null,
-                tint = colorResource(R.color.dark_charcoal),
+                tint = AppColors.onPanel,
                 modifier = Modifier.size(64.dp)
             )
             Spacer(Modifier.height(spacing.medium))
             Text(
                 text = stringResource(R.string.volume_too_low_title),
                 style = AppTheme.typography.headlineMedium,
-                color = colorResource(R.color.dark_charcoal),
+                color = AppColors.onPanel,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(spacing.small))
             Text(
                 text = stringResource(R.string.volume_too_low_text),
                 style = AppTheme.typography.bodyLarge,
-                color = colorResource(R.color.dark_charcoal),
+                color = AppColors.onPanel,
                 textAlign = TextAlign.Center
             )
         }
@@ -567,21 +567,21 @@ private fun VolumeTooLowOverlay() {
 private fun PrivateOutputBanner(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
-            .background(colorResource(R.color.light_brown), RoundedCornerShape(12.dp))
+            .background(AppColors.panel, RoundedCornerShape(12.dp))
             .padding(horizontal = spacing.medium, vertical = spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(android.R.drawable.stat_sys_warning),
             contentDescription = null,
-            tint = colorResource(R.color.dark_brown),
+            tint = AppColors.onWarning,
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(spacing.small))
         Text(
             text = stringResource(R.string.private_output_warning),
             style = AppTheme.typography.bodyMedium,
-            color = colorResource(R.color.dark_brown)
+            color = AppColors.onWarning
         )
     }
 }
@@ -611,8 +611,8 @@ private fun GalleryButton(
             .upright()
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.1f))
-            .border(2.dp, colorResource(R.color.off_white), CircleShape)
+            .background(AppColors.thumbnailPlaceholder)
+            .border(2.dp, AppColors.onDark, CircleShape)
             .clickable(
                 enabled = enabled && photoUri != null,
                 onClickLabel = stringResource(R.string.open_last_photo),
@@ -633,7 +633,7 @@ private fun GalleryButton(
             Icon(
                 painter = painterResource(android.R.drawable.ic_menu_gallery),
                 contentDescription = null,
-                tint = colorResource(R.color.off_white),
+                tint = AppColors.onDark,
                 modifier = Modifier.size(28.dp)
             )
         }
@@ -683,22 +683,22 @@ fun CaptureButton(
         colors = when (timerState) {
             is TimerState.Capturing -> {
                 ButtonDefaults.buttonColors(
-                    containerColor = colorResource(R.color.camera_red),
-                    contentColor = colorResource(R.color.off_white)
+                    containerColor = AppColors.capturing,
+                    contentColor = AppColors.onCapturing
                 )
             }
 
             is TimerState.Counting -> {
                 ButtonDefaults.buttonColors(
-                    containerColor = colorResource(R.color.kiwi_brown),
-                    contentColor = colorResource(R.color.dark_charcoal)
+                    containerColor = AppColors.counting,
+                    contentColor = AppColors.onCounting
                 )
             }
 
             is TimerState.Idle -> {
                 ButtonDefaults.buttonColors(
-                    containerColor = colorResource(R.color.kiwi_green),
-                    contentColor = colorResource(R.color.dark_charcoal)
+                    containerColor = AppColors.accent,
+                    contentColor = AppColors.onAccent
                 )
             }
         }

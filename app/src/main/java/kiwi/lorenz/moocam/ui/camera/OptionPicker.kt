@@ -30,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -44,6 +43,7 @@ import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.TestTags
+import kiwi.lorenz.moocam.ui.theme.AppColors
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -88,7 +88,7 @@ private fun <T> OptionPickerContent(
             .uprightPanel()
             .width(200.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.Black.copy(alpha = 0.7f))
+            .background(AppColors.overlayBackground)
             .padding(spacing.small)
             .testTag(TestTags.OPTION_PICKER)
             .semantics { paneTitle = title }
@@ -97,8 +97,12 @@ private fun <T> OptionPickerContent(
         options.forEachIndexed { index, option ->
             val isSelected = option == selectedOption
             val background by animateColorAsState(
-                targetValue = if (isSelected) colorResource(R.color.kiwi_green) else Color.Transparent,
+                targetValue = if (isSelected) AppColors.accent else Color.Transparent,
                 label = "optionBackground"
+            )
+            val contentColor by animateColorAsState(
+                targetValue = if (isSelected) AppColors.onAccent else AppColors.onDark,
+                label = "optionContent"
             )
             Row(
                 modifier = Modifier
@@ -119,13 +123,13 @@ private fun <T> OptionPickerContent(
                 Icon(
                     painter = painterResource(icon(option)),
                     contentDescription = null,
-                    tint = colorResource(R.color.off_white),
+                    tint = contentColor,
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
                     text = label(option),
                     style = AppTheme.typography.bodyLarge,
-                    color = colorResource(R.color.off_white),
+                    color = contentColor,
                     maxLines = 1,
                     // Shrinks with a large font size, where a long label wouldn't fit the row
                     autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = 15.sp)

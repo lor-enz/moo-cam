@@ -19,11 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kiwi.lorenz.moocam.R
+import kiwi.lorenz.moocam.ui.theme.AppColors
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -102,7 +101,7 @@ fun ZoomPresetRow(
     Row(
         modifier = modifier
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(AppColors.overlayBackground)
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(spacing.extraSmall)
     ) {
@@ -112,7 +111,7 @@ fun ZoomPresetRow(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) colorResource(R.color.kiwi_green) else Color.Transparent)
+                    .background(if (isSelected) AppColors.accent else Color.Transparent)
                     .selectable(
                         selected = isSelected,
                         role = Role.RadioButton,
@@ -123,7 +122,7 @@ fun ZoomPresetRow(
                 Text(
                     text = formatZoom(preset),
                     style = AppTheme.typography.bodyMedium,
-                    color = colorResource(R.color.off_white),
+                    color = if (isSelected) AppColors.onAccent else AppColors.onDark,
                     modifier = Modifier.upright()
                 )
             }

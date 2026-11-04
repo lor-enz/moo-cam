@@ -33,13 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kiwi.lorenz.moocam.R
+import kiwi.lorenz.moocam.ui.theme.AppColors
 
 @Composable
 fun <T> SegmentedControl(
@@ -50,10 +49,10 @@ fun <T> SegmentedControl(
     label: (T) -> String = { it.toString() },
     labelModifier: Modifier = Modifier,
     borderWidth: Dp = 1.dp,
-    selectedBackgroundColor: Color = colorResource(R.color.kiwi_green),
-    unselectedBackgroundColor: Color = colorResource(R.color.transparent),
-    selectedTextColor: Color = colorResource(R.color.off_white),
-    unselectedTextColor: Color = colorResource(R.color.off_white),
+    selectedBackgroundColor: Color = AppColors.accent,
+    unselectedBackgroundColor: Color = Color.Transparent,
+    selectedTextColor: Color = AppColors.onAccent,
+    unselectedTextColor: Color = AppColors.onDark,
     itemPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     animationSpec: AnimationSpec<Float> = spring()
 ) {
@@ -96,7 +95,7 @@ fun <T> SegmentedControl(
         modifier = modifier
             .height(IntrinsicSize.Min),
         shape = shape,
-        border = BorderStroke(borderWidth, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        border = BorderStroke(borderWidth, AppColors.outline),
         color = unselectedBackgroundColor
     ) {
         Layout(
