@@ -75,9 +75,10 @@ class CameraViewModel @Inject constructor(
     private var camera: Camera? = null
     private var preview: Preview? = null
 
-    // How the device is held, as a Surface.ROTATION_* value. The UI stays in portrait,
-    // but photos taken in landscape must still be saved upright.
-    private var deviceRotation = Surface.ROTATION_0
+    // How the device is held, as a Surface.ROTATION_* value. The layout stays in portrait,
+    // but its signage turns along and photos taken in landscape must be saved upright.
+    private val _deviceRotation = MutableStateFlow(Surface.ROTATION_0)
+    val deviceRotation = _deviceRotation.asStateFlow()
 
     // Whether a tapped focus spot is locked, so the viewfinder can keep showing it
     private val _isFocusLocked = MutableStateFlow(false)
@@ -195,7 +196,7 @@ class CameraViewModel @Inject constructor(
                     // MAXIMIZE_QUALITY (and using the flash) makes CameraX refocus for the
                     // photo and unlock the focus afterwards.
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                    .setTargetRotation(deviceRotation)
+                    .setTargetRotation(_deviceRotation.value)
                     .build()
                 val camera = cameraProvider!!.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
@@ -250,7 +251,7 @@ class CameraViewModel @Inject constructor(
     }
 
     fun setDeviceRotation(rotation: Int) {
-        deviceRotation = rotation
+        _deviceRotation.value = rotation
         imageCapture?.targetRotation = rotation
     }
 

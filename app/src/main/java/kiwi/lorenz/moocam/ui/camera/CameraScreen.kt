@@ -10,7 +10,6 @@ import android.os.Looper
 import android.util.Log
 import android.util.Size
 import android.view.OrientationEventListener
-import android.view.Surface
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -42,6 +41,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
@@ -109,7 +109,8 @@ fun CameraScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshLastPhoto()
     }
-    DeviceRotationEffect(onRotationChange = viewModel::setDeviceRotation)
+    val deviceRotation by viewModel.deviceRotation.collectAsStateWithLifecycle()
+    DeviceRotationEffect(rotation = deviceRotation, onRotationChange = viewModel::setDeviceRotation)
     DisplayRotationEffect(onRotationChange = viewModel::setDisplayRotation)
 
     // The phone often waits on a shelf or tripod for the right moment; if the screen turned
@@ -162,101 +163,97 @@ fun CameraScreen(
         ViewfinderSetting.CAPTURE_MODE
     )
 
-    CameraScreenContent(
-        onCaptureButtonTap = {
-            openSetting = null
-            viewModel.buttonTapped()
-        },
-        cameraState = cameraState,
-        timerState = timerState,
-        delays = viewModel.delays,
-        selectedDelay = selectedDelay, // is passing the Int directly best practice here?
-        onDelayChange = { newDelay ->
-            openSetting = null
-            viewModel.setDelay(newDelay)
-        },
-        isVolumeTooLow = isVolumeTooLow,
-        isPrivateOutputConnected = isPrivateOutputConnected,
-        lastPhotoUri = lastPhotoUri,
-        onGalleryButtonTap = { uri ->
-            openSetting = null
-            openInGallery(context, uri)
-        },
-        selectedSound = selectedSound,
-        selectedFlash = selectedFlash.takeIf { hasFlashUnit },
-        captureMode = captureMode,
-        openSetting = openSetting,
-        onSettingTap = { setting -> openSetting = setting.takeIf { it != openSetting } },
-        onPickerDismiss = { openSetting = null },
-        settingPickers = {
-            val railMargin = spacing.medium
-            val pickerModifier = { setting: ViewfinderSetting ->
-                besideRailButton(settings.indexOf(setting), settings.size, railMargin)
-            }
-            OptionPicker(
-                visible = openSetting == ViewfinderSetting.SOUND,
-                title = stringResource(R.string.choose_sound),
-                options = viewModel.sounds,
-                selectedOption = selectedSound,
-                label = { it.displayName },
-                icon = { it.iconRes },
-                onOptionTap = { sound ->
-                    viewModel.setSound(sound)
-                    viewModel.previewSound(sound)
-                },
-                modifier = pickerModifier(ViewfinderSetting.SOUND)
-            )
-            OptionPicker(
-                visible = openSetting == ViewfinderSetting.FLASH,
-                title = stringResource(R.string.choose_flash),
-                options = viewModel.flashes,
-                selectedOption = selectedFlash,
-                label = { it.displayName },
-                icon = { it.iconRes },
-                onOptionTap = { flash ->
-                    viewModel.setFlash(flash)
-                    viewModel.previewFlash(flash)
-                },
-                modifier = pickerModifier(ViewfinderSetting.FLASH)
-            )
-            OptionPicker(
-                visible = openSetting == ViewfinderSetting.CAPTURE_MODE,
-                title = stringResource(R.string.choose_capture_mode),
-                options = viewModel.captureModes,
-                selectedOption = captureMode,
-                label = { it.displayName },
-                icon = { it.iconRes },
-                onOptionTap = { mode -> viewModel.setCaptureMode(mode) },
-                modifier = pickerModifier(ViewfinderSetting.CAPTURE_MODE)
-            )
-        },
-        zoom = zoom,
-        onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
-        onTapToFocus = { point -> viewModel.focusOn(point) },
-        isFocusLocked = isFocusLocked
-    )
+    CompositionLocalProvider(LocalUprightAngle provides rememberUprightAngle(deviceRotation)) {
+        CameraScreenContent(
+            onCaptureButtonTap = {
+                openSetting = null
+                viewModel.buttonTapped()
+            },
+            cameraState = cameraState,
+            timerState = timerState,
+            delays = viewModel.delays,
+            selectedDelay = selectedDelay, // is passing the Int directly best practice here?
+            onDelayChange = { newDelay ->
+                openSetting = null
+                viewModel.setDelay(newDelay)
+            },
+            isVolumeTooLow = isVolumeTooLow,
+            isPrivateOutputConnected = isPrivateOutputConnected,
+            lastPhotoUri = lastPhotoUri,
+            onGalleryButtonTap = { uri ->
+                openSetting = null
+                openInGallery(context, uri)
+            },
+            selectedSound = selectedSound,
+            selectedFlash = selectedFlash.takeIf { hasFlashUnit },
+            captureMode = captureMode,
+            openSetting = openSetting,
+            onSettingTap = { setting -> openSetting = setting.takeIf { it != openSetting } },
+            onPickerDismiss = { openSetting = null },
+            settingPickers = {
+                val railMargin = spacing.medium
+                val pickerModifier = { setting: ViewfinderSetting ->
+                    besideRailButton(settings.indexOf(setting), settings.size, railMargin)
+                }
+                OptionPicker(
+                    visible = openSetting == ViewfinderSetting.SOUND,
+                    title = stringResource(R.string.choose_sound),
+                    options = viewModel.sounds,
+                    selectedOption = selectedSound,
+                    label = { it.displayName },
+                    icon = { it.iconRes },
+                    onOptionTap = { sound ->
+                        viewModel.setSound(sound)
+                        viewModel.previewSound(sound)
+                    },
+                    modifier = pickerModifier(ViewfinderSetting.SOUND)
+                )
+                OptionPicker(
+                    visible = openSetting == ViewfinderSetting.FLASH,
+                    title = stringResource(R.string.choose_flash),
+                    options = viewModel.flashes,
+                    selectedOption = selectedFlash,
+                    label = { it.displayName },
+                    icon = { it.iconRes },
+                    onOptionTap = { flash ->
+                        viewModel.setFlash(flash)
+                        viewModel.previewFlash(flash)
+                    },
+                    modifier = pickerModifier(ViewfinderSetting.FLASH)
+                )
+                OptionPicker(
+                    visible = openSetting == ViewfinderSetting.CAPTURE_MODE,
+                    title = stringResource(R.string.choose_capture_mode),
+                    options = viewModel.captureModes,
+                    selectedOption = captureMode,
+                    label = { it.displayName },
+                    icon = { it.iconRes },
+                    onOptionTap = { mode -> viewModel.setCaptureMode(mode) },
+                    modifier = pickerModifier(ViewfinderSetting.CAPTURE_MODE)
+                )
+            },
+            zoom = zoom,
+            onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
+            onTapToFocus = { point -> viewModel.focusOn(point) },
+            isFocusLocked = isFocusLocked
+        )
+    }
 }
 
 // The activity is locked to portrait, so the display never rotates. Read how the device is
 // held from the sensor instead, so landscape photos are saved upright. Only listens while
 // the screen is started, to not use the sensor in the background.
 @Composable
-private fun DeviceRotationEffect(onRotationChange: (Int) -> Unit) {
+private fun DeviceRotationEffect(rotation: Int, onRotationChange: (Int) -> Unit) {
     val context = LocalContext.current
+    val currentRotation by rememberUpdatedState(rotation)
     val currentOnRotationChange by rememberUpdatedState(onRotationChange)
     LifecycleStartEffect(context) {
         val listener = object : OrientationEventListener(context) {
             override fun onOrientationChanged(orientation: Int) {
                 // Unknown when the phone lies flat; keep the last rotation then
                 if (orientation == ORIENTATION_UNKNOWN) return
-                // Degrees clockwise from upright, mapped to the matching display rotation
-                val rotation = when (orientation) {
-                    in 45 until 135 -> Surface.ROTATION_270
-                    in 135 until 225 -> Surface.ROTATION_180
-                    in 225 until 315 -> Surface.ROTATION_90
-                    else -> Surface.ROTATION_0
-                }
-                currentOnRotationChange(rotation)
+                currentOnRotationChange(deviceRotationFor(orientation, currentRotation))
             }
         }
         listener.enable()
@@ -460,6 +457,7 @@ private fun CameraScreenContent(
                     selectedItem = selectedDelay,
                     onItemSelected = { i -> onDelayChange(i) },
                     label = { seconds -> "$seconds s" },
+                    labelModifier = Modifier.upright(),
                 )
                 Spacer(Modifier.height(spacing.large))
                 if (isPrivateOutputConnected) {
@@ -584,6 +582,7 @@ private fun GalleryButton(
     Box(
         modifier = modifier
             .size(56.dp)
+            .upright()
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.1f))
@@ -683,7 +682,8 @@ fun CaptureButton(
                 text = buttonText,
                 textAlign = TextAlign.Center,
                 style = AppTheme.typography.headlineMedium,
-                maxLines = 1
+                maxLines = 1,
+                modifier = Modifier.upright()
             )
         }
     }

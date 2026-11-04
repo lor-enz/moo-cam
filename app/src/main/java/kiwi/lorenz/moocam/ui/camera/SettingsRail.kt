@@ -82,6 +82,7 @@ fun SettingsRailButton(
     Column(
         modifier = modifier
             .size(RailButtonSize)
+            .upright()
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
             .background(background)

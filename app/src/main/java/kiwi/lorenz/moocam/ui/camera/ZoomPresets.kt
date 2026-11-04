@@ -123,7 +123,8 @@ fun ZoomPresetRow(
                 Text(
                     text = formatZoom(preset),
                     style = AppTheme.typography.bodyMedium,
-                    color = colorResource(R.color.off_white)
+                    color = colorResource(R.color.off_white),
+                    modifier = Modifier.upright()
                 )
             }
         }
