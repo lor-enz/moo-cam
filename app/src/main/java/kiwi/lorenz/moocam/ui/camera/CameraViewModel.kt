@@ -110,7 +110,7 @@ class CameraViewModel @Inject constructor(
     // Remembered so a surprise is never the same sound twice in a row
     private var lastSurpriseSound: AnimalSound? = null
 
-    // Phones without a flashlight don't get the flash chip; false until the camera is bound
+    // Phones without a flashlight don't get the flash button; false until the camera is bound
     private val _hasFlashUnit = MutableStateFlow(false)
     val hasFlashUnit = _hasFlashUnit.asStateFlow()
 

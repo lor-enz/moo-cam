@@ -12,7 +12,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 - Keep permissions to the minimum the app needs. Don't add broad ones like `READ_MEDIA_IMAGES` just to improve a feature; e.g. the gallery button only shows photos taken in the current session on purpose.
 - Packages are by feature: `audio` (animal sounds, audio output), `flash` (the blinking flashlight), `capture` (capture modes), `settings` (stored choices). Screens live in `ui/<screen>` (`camera`, `permission`) with their view models; `ui` itself holds only what several screens share (`SegmentedControl`, `theme`). `di` holds the Hilt modules. Put a new file in the package of its feature, or propose a new one when it fits none.
 - Check the package of every file you touch: a file used by only one feature belongs in that feature's package, one used by several goes up to `ui`. If a move is advised, ask the user first, and move in a `🚚` commit of its own (moves only, so blame follows the rename).
-- Give new UI elements a test tag in the same change that adds them, so they can be driven by adb (see Testing). There are none yet: the first one creates `ui/TestTags.kt` and sets `testTagsAsResourceId` at the root.
+- Give new UI elements a test tag in `ui/TestTags.kt` in the same change that adds them, so they can be driven by adb (see Testing).
 - Record decisions and findings under Project notes as they come up, and update this file and the readme in the commit they belong to, not in a separate one. Keep entries short and remove ones that no longer apply, so this file stays small.
 
 ## Testing
@@ -37,4 +37,8 @@ None yet.
 
 ## Planned changes
 
-None yet.
+Revamp of the viewfinder settings, in milestones the user tests on a phone. The settings rail is done.
+
+- Popover list instead of the dialogs, growing out of the tapped button. A tap applies and previews; no OK or Cancel. A tap on the viewfinder only closes it.
+- Rotate the signage by device orientation, with hysteresis, while the layout stays in portrait: rail, zoom, timer, countdown, gallery thumbnail.
+- Rotate the popover and the volume warning as a whole, and show the headphone banner over the viewfinder in landscape. Turning the phone closes an open popover. Toasts and permission screens stay as they are.

@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -83,6 +84,7 @@ import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.capture.CaptureMode
 import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.SegmentedControl
+import kiwi.lorenz.moocam.ui.TestTags
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
@@ -290,7 +292,7 @@ private fun CameraScreenContent(
     onGalleryButtonTap: (Uri) -> Unit,
     selectedSound: SoundChoice,
     onSoundLabelTap: () -> Unit,
-    // Null hides the flash chip, for phones without a flashlight
+    // Null hides the flash button, for phones without a flashlight
     selectedFlash: AttentionFlash?,
     onFlashLabelTap: () -> Unit,
     captureMode: CaptureMode,
@@ -302,7 +304,7 @@ private fun CameraScreenContent(
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
-    // Debug only: long-pressing the capture mode chip toggles a stock photo in the viewfinder,
+    // Debug only: long-pressing the capture mode button toggles a stock photo in the viewfinder,
     // for store listing screenshots
     var showStockPhoto by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
@@ -312,39 +314,42 @@ private fun CameraScreenContent(
             .statusBarsPadding()) {
             // Drawn on top of the viewfinder
             val viewfinderOverlay: @Composable BoxScope.() -> Unit = {
-                ViewfinderChip(
-                    iconRes = android.R.drawable.ic_lock_silent_mode_off,
-                    text = selectedSound.displayName,
-                    onClickLabel = stringResource(R.string.choose_sound),
-                    enabled = timerState is TimerState.Idle,
-                    onClick = onSoundLabelTap,
-                    modifier = Modifier.padding(spacing.medium)
-                )
-                selectedFlash?.let { flash ->
-                    ViewfinderChip(
-                        iconRes = if (flash == AttentionFlash.OFF) R.drawable.flash_off else R.drawable.flash,
-                        text = flash.shortName,
-                        onClickLabel = stringResource(R.string.choose_flash),
+                SettingsRail(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(spacing.medium)
+                ) {
+                    SettingsRailButton(
+                        iconRes = android.R.drawable.ic_lock_silent_mode_off,
+                        caption = selectedSound.displayName,
+                        onClickLabel = stringResource(R.string.choose_sound),
                         enabled = timerState is TimerState.Idle,
-                        onClick = onFlashLabelTap,
+                        onClick = onSoundLabelTap,
+                        modifier = Modifier.testTag(TestTags.SOUND_BUTTON)
+                    )
+                    selectedFlash?.let { flash ->
+                        SettingsRailButton(
+                            iconRes = if (flash == AttentionFlash.OFF) R.drawable.flash_off else R.drawable.flash,
+                            caption = flash.shortName,
+                            onClickLabel = stringResource(R.string.choose_flash),
+                            enabled = timerState is TimerState.Idle,
+                            onClick = onFlashLabelTap,
+                            modifier = Modifier.testTag(TestTags.FLASH_BUTTON)
+                        )
+                    }
+                    // Shows the photo count, not the mode's name, which is too long for the caption
+                    SettingsRailButton(
+                        iconRes = captureMode.iconRes,
+                        caption = captureMode.photoCount.toString(),
+                        onClickLabel = stringResource(R.string.choose_capture_mode),
+                        enabled = timerState is TimerState.Idle,
+                        onClick = onCaptureModeTap,
+                        onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } },
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(spacing.medium)
+                            .testTag(TestTags.CAPTURE_MODE_BUTTON)
+                            .semantics { contentDescription = captureMode.displayName }
                     )
                 }
-                // Shows the photo count, not the mode's name, to leave room for the zoom presets
-                ViewfinderChip(
-                    iconRes = captureMode.iconRes,
-                    text = captureMode.photoCount.toString(),
-                    onClickLabel = stringResource(R.string.choose_capture_mode),
-                    enabled = timerState is TimerState.Idle,
-                    onClick = onCaptureModeTap,
-                    onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(spacing.medium)
-                        .semantics { contentDescription = captureMode.displayName }
-                )
                 zoom?.let {
                     ZoomPresetRow(
                         zoom = it,

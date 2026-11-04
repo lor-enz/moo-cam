@@ -8,7 +8,7 @@ import kiwi.lorenz.moocam.R
 // at least a second before the photo, so the exposure has settled again by then.
 enum class AttentionFlash(
     val displayName: String,
-    // For the chip on the viewfinder, which shares its row with the sound chip
+    // For the caption in the settings rail, which has room for little text
     val shortName: String,
     @DrawableRes val iconRes: Int,
     val pattern: List<Long>

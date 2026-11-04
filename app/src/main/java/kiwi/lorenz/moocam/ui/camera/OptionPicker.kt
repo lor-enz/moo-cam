@@ -1,9 +1,7 @@
 package kiwi.lorenz.moocam.ui.camera
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
@@ -46,48 +43,6 @@ import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
-
-// Shows a current choice on top of the viewfinder, e.g. the sound that plays before the
-// photo; tapping it opens the matching picker
-@Composable
-fun ViewfinderChip(
-    @DrawableRes iconRes: Int,
-    text: String,
-    onClickLabel: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    // Null disables the long press
-    onLongClick: (() -> Unit)? = null
-) {
-    Row(
-        modifier = modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
-            .combinedClickable(
-                enabled = enabled,
-                onClickLabel = onClickLabel,
-                role = Role.Button,
-                onLongClick = onLongClick,
-                onClick = onClick
-            )
-            .padding(horizontal = spacing.medium, vertical = spacing.small),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            tint = colorResource(R.color.off_white),
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(spacing.small))
-        Text(
-            text = text,
-            style = AppTheme.typography.bodyLarge,
-            color = colorResource(R.color.off_white)
-        )
-    }
-}
 
 // Tapping an option previews and selects it. Only Cancel and OK close the dialog, so a tap
 // next to it or the back button can't throw away the choice by accident.
@@ -203,20 +158,6 @@ private fun <T> OptionPickerContent(
                 Text(stringResource(android.R.string.ok))
             }
         }
-    }
-}
-
-@Preview
-@Composable
-private fun PreviewViewfinderChip() {
-    MooCamTheme {
-        ViewfinderChip(
-            iconRes = android.R.drawable.ic_lock_silent_mode_off,
-            text = AnimalSound.MOO.displayName,
-            onClickLabel = "",
-            enabled = true,
-            onClick = {}
-        )
     }
 }
 
