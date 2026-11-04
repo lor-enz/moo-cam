@@ -2,6 +2,8 @@ package kiwi.lorenz.moocam.ui.camera
 
 import android.view.Surface
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UprightSignageTest {
@@ -54,6 +56,12 @@ class UprightSignageTest {
         assertEquals(-90f, shortestTurn(0f, 270f), 0f)
         assertEquals(90f, shortestTurn(0f, 90f), 0f)
         assertEquals(-90f, shortestTurn(-270f, 0f - 360f), 0f)
+    }
+
+    @Test
+    fun `only angles towards landscape are sideways`() {
+        listOf(90f, 270f, -90f, 450f, 46f).forEach { assertTrue("$it", isSideways(it)) }
+        listOf(0f, 180f, 360f, -180f, 44f).forEach { assertFalse("$it", isSideways(it)) }
     }
 
     @Test

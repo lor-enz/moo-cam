@@ -85,6 +85,7 @@ private fun <T> OptionPickerContent(
 ) {
     Column(
         modifier = Modifier
+            .uprightPanel()
             .width(200.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.Black.copy(alpha = 0.7f))

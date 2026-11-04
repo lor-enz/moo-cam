@@ -30,7 +30,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 ## Project notes
 
 - The option pickers are popovers inside the viewfinder, not dialogs: a tap applies an option at once, so nothing needs OK or Cancel. The camera stays usable while one is open, so the countdown has to stop a running flash preview first.
-- The layout stays in portrait; `Modifier.upright()` turns signage by how the device is held. Rotation switches 15° past the middle between two orientations, so it can't flicker. Photos use the same value, so they always match what the screen shows.
+- The layout stays in portrait; `Modifier.upright()` turns signage by how the device is held, and `uprightPanel()` also swaps the size of elements that aren't square. Rotation switches 15° past the middle between two orientations, so it can't flicker. Photos use the same value, so they always match what the screen shows. Toasts and permission screens don't turn.
 
 ## Known issues
 
@@ -38,6 +38,7 @@ None yet.
 
 ## Planned changes
 
-Revamp of the viewfinder settings, in milestones the user tests on a phone. The settings rail, the pickers and the rotating signage are done.
-
-- Rotate the popover and the volume warning as a whole, and show the headphone banner over the viewfinder in landscape. Turning the phone closes an open popover. Toasts and permission screens stay as they are.
+- Refactor the colors: move them into `ui/theme/Color.kt` as a palette and roles, share the overlay values, and delete the unused ones. Drop dynamic color, which replaces the brand colors with the wallpaper's on Android 12+.
+- The Buttons shown inside the viewfinder should have a similar design and colors. Currently the zoom buttons are different from the buttons in the side rail.
+- Add a timer icon left of the timer selection row.
+- Rethink the brand colors. The green is ugly and doesn't fit the Cow/Moo theme.

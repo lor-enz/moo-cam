@@ -69,6 +69,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -156,6 +157,8 @@ fun CameraScreen(
     val captureMode by viewModel.captureMode.collectAsStateWithLifecycle()
     var openSetting by rememberSaveable { mutableStateOf<ViewfinderSetting?>(null) }
     BackHandler(enabled = openSetting != null) { openSetting = null }
+    // Simpler than moving an open picker along; it reopens the right way up
+    LaunchedEffect(deviceRotation) { openSetting = null }
 
     // Top to bottom in the rail
     val settings = listOfNotNull(
@@ -313,6 +316,7 @@ private fun CameraScreenContent(
     // Debug only: long-pressing the capture mode button toggles a stock photo in the viewfinder,
     // for store listing screenshots
     var showStockPhoto by remember { mutableStateOf(false) }
+    val isSideways = rememberIsSideways()
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier
             .fillMaxSize()
@@ -327,6 +331,16 @@ private fun CameraScreenContent(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(spacing.medium)
+                    )
+                }
+                // Too wide to turn in the controls below
+                if (isPrivateOutputConnected && isSideways) {
+                    PrivateOutputBanner(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(spacing.medium)
+                            .uprightPanel()
+                            .testTag(TestTags.PRIVATE_OUTPUT_BANNER)
                     )
                 }
                 // Invisible. On top of the viewfinder and the zoom presets, so a tap there only
@@ -437,7 +451,8 @@ private fun CameraScreenContent(
                         ) {
                             Text(
                                 text = stringResource(R.string.camera_start_failed, cameraState.message),
-                                color = Color.White
+                                color = Color.White,
+                                modifier = Modifier.uprightPanel()
                             )
                         }
                     }
@@ -464,8 +479,15 @@ private fun CameraScreenContent(
                 )
                 Spacer(Modifier.height(spacing.large))
                 if (isPrivateOutputConnected) {
+                    // Stays in the layout when sideways, so the capture button doesn't jump
                     PrivateOutputBanner(
-                        modifier = Modifier.padding(horizontal = spacing.large)
+                        modifier = Modifier
+                            .padding(horizontal = spacing.large)
+                            .upright()
+                            .then(
+                                if (isSideways) Modifier.alpha(0f).clearAndSetSemantics {}
+                                else Modifier.testTag(TestTags.PRIVATE_OUTPUT_BANNER)
+                            )
                     )
                     Spacer(Modifier.height(spacing.medium))
                 }
@@ -511,6 +533,7 @@ private fun VolumeTooLowOverlay() {
     ) {
         Column(
             modifier = Modifier
+                .uprightPanel()
                 .padding(spacing.large)
                 .background(colorResource(R.color.off_white), RoundedCornerShape(24.dp))
                 .padding(spacing.large),
