@@ -30,6 +30,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 
 ## Project notes
 
+- Release builds run R8 (shrinking, obfuscation, resource shrinking), which Google Play requires by Feb 2027. It doesn't run on debug builds, so reflection and name lookups only break in a release build; test those there. The bundle carries `mapping.txt`, so Play can translate stack traces.
 - The option pickers are popovers inside the viewfinder, not dialogs: a tap applies an option at once, so nothing needs OK or Cancel. The camera stays usable while one is open, so the countdown has to stop a running flash preview first.
 - The layout stays in portrait; `Modifier.upright()` turns signage by how the device is held, and `uprightPanel()` also swaps the size of elements that aren't square. Rotation switches 15° past the middle between two orientations, so it can't flicker. Photos use the same value, so they always match what the screen shows. Toasts and permission screens don't turn.
 - The app has one dark look: a cream accent on charcoal, with no light theme and no dynamic color. Colors live in `AppColors` (`ui/theme/Color.kt`). Cream on dark needs its backing, so accents sit on the bar or an overlay, and content on the accent uses `onAccent`.
