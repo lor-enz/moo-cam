@@ -5,31 +5,23 @@ import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraInfo
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kiwi.lorenz.moocam.ui.SegmentedControl
 import kiwi.lorenz.moocam.ui.theme.AppColors
-import kiwi.lorenz.moocam.ui.theme.AppTheme
-import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 import java.text.DecimalFormat
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+
+private val ZoomPresetSize = 44.dp
 
 data class ZoomUiState(
     val presets: List<Float>,
@@ -98,36 +90,23 @@ fun ZoomPresetRow(
 ) {
     if (zoom.presets.size < 2) return
 
-    Row(
+    SegmentedControl(
+        // Square presets make the selection a circle; a fixed height keeps a large font size
+        // from stretching it
         modifier = modifier
-            .clip(CircleShape)
-            .background(AppColors.overlayBackground)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.extraSmall)
-    ) {
-        zoom.presets.forEach { preset ->
-            val isSelected = abs(zoom.zoomRatio - preset) < 0.05f
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (isSelected) AppColors.accent else Color.Transparent)
-                    .selectable(
-                        selected = isSelected,
-                        role = Role.RadioButton,
-                        onClick = { onPresetTap(preset) }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = formatZoom(preset),
-                    style = AppTheme.typography.bodyMedium,
-                    color = if (isSelected) AppColors.onAccent else AppColors.onDark,
-                    modifier = Modifier.upright()
-                )
-            }
-        }
-    }
+            .size(width = ZoomPresetSize * zoom.presets.size, height = ZoomPresetSize),
+        items = zoom.presets,
+        // Only the presets change the zoom, but the camera may report a ratio slightly off
+        selectedItem = zoom.presets.minBy { abs(it - zoom.zoomRatio) },
+        onItemSelected = onPresetTap,
+        label = ::formatZoom,
+        labelModifier = Modifier.upright(),
+        labelAutoSize = TextAutoSize.StepBased(minFontSize = 5.sp, maxFontSize = 15.sp),
+        borderWidth = 0.5.dp,
+        unselectedBackgroundColor = AppColors.overlayBackground,
+        // Keeps the labels inside the circle, also when they turn with the device
+        itemPadding = PaddingValues(horizontal = 4.dp)
+    )
 }
 
 @Preview

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,6 +51,8 @@ fun <T> SegmentedControl(
     modifier: Modifier = Modifier,
     label: (T) -> String = { it.toString() },
     labelModifier: Modifier = Modifier,
+    // Shrinks the labels to fit, for items too small for a large font size
+    labelAutoSize: TextAutoSize? = null,
     borderWidth: Dp = 1.dp,
     selectedBackgroundColor: Color = AppColors.accent,
     unselectedBackgroundColor: Color = Color.Transparent,
@@ -141,6 +144,7 @@ fun <T> SegmentedControl(
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
+                            autoSize = labelAutoSize,
                             modifier = labelModifier
                         )
                     }

@@ -20,7 +20,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 
 - Check that the app builds with `./gradlew :app:assembleDebug`.
 - Unit tests run on the JVM with `./gradlew :app:testDebugUnitTest`. There are only the template's examples so far; add tests when changing logic that runs without a device (e.g. `CameraViewModel`, `SettingsRepository`, `SoundRepository`).
-- The emulator is for the UI: layout, the permission screens, pickers and settings, the countdown. Its camera shows a fake scene, so leave to the user what needs real hardware: photo quality, when the sound plays relative to the photo, the flashlight, speaker vs. headphones. Tell them what to check.
+- The emulator is for the UI: layout, the permission screens, pickers and settings, the countdown. Its camera shows a fake scene and can't zoom, which hides the zoom presets; to see them, feed `ZoomPresetRow` fake presets temporarily. Leave to the user what needs real hardware: photo quality, when the sound plays relative to the photo, the flashlight, speaker vs. headphones. Tell them what to check.
 - Only consider such a change tested once the user confirms it. If they don't respond to that, treat it as untested; never assume it works.
 - Use only an already running emulator (`Emu_Pixel_9a_No_Google`, Android 16, for everyday testing). If none is running or it misbehaves (hanging installs, very slow responses, unresponsive adb), stop and tell the user instead of waiting or working around it. Only one runs at a time; ask the user if a test needs another.
 - Only test on the emulator unless the user says otherwise; their own phone may be connected via adb too.
@@ -41,5 +41,4 @@ None yet.
 
 ## Planned changes
 
-- The Buttons shown inside the viewfinder should have a similar design and colors. Currently the zoom buttons are different from the buttons in the side rail.
 - Add a timer icon left of the timer selection row.
