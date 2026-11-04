@@ -3,6 +3,7 @@ package kiwi.lorenz.moocam.ui.camera
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -76,7 +77,7 @@ fun SettingsRailButton(
     onLongClick: (() -> Unit)? = null
 ) {
     val background by animateColorAsState(
-        targetValue = if (isOpen) colorResource(R.color.kiwi_green) else Color.Black.copy(alpha = 0.5f),
+        targetValue = if (isOpen) colorResource(R.color.kiwi_green) else Color.Black.copy(alpha = 0.75f),
         label = "railButtonBackground"
     )
     Column(
@@ -86,6 +87,7 @@ fun SettingsRailButton(
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
             .background(background)
+            .border(0.5.dp, colorResource(R.color.gray_button_border), CircleShape)
             .combinedClickable(
                 enabled = enabled,
                 onClickLabel = onClickLabel,
@@ -128,7 +130,7 @@ private fun PreviewSettingsRail() {
             )
             SettingsRailButton(
                 iconRes = R.drawable.flash,
-                caption = "3× short",
+                caption = "3×",
                 onClickLabel = "",
                 enabled = true,
                 onClick = {}

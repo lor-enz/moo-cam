@@ -21,6 +21,7 @@ import androidx.camera.core.MeteringPoint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -458,6 +459,8 @@ private fun CameraScreenContent(
                     onItemSelected = { i -> onDelayChange(i) },
                     label = { seconds -> "$seconds s" },
                     labelModifier = Modifier.upright(),
+                    // Tall enough for the labels to turn with the device
+                    itemPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
                 )
                 Spacer(Modifier.height(spacing.large))
                 if (isPrivateOutputConnected) {

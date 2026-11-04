@@ -16,7 +16,7 @@ enum class AttentionFlash(
     OFF("Off", "Off", R.drawable.flash_off, emptyList()),
     LONG("One long flash", "Long", R.drawable.flash, listOf(1000L)),
     SHORT("One short flash", "Short", R.drawable.flash, listOf(200L)),
-    THREE_SHORT("Three short flashes", "3× short", R.drawable.flash, listOf(150L, 150L, 150L, 150L, 150L)),
+    THREE_SHORT("Three short flashes", "3×", R.drawable.flash, listOf(150L, 150L, 150L, 150L, 150L)),
     // Picks one of the flashing patterns each time, so the kid doesn't get used to it
     RANDOM("Random", "Random", R.drawable.shuffle_variant, emptyList());
 
