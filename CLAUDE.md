@@ -7,6 +7,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 ## How to work here
 
 - Commit messages use [gitmoji](https://gitmoji.dev). Follow the rules in [`gitmoji.md`](gitmoji.md) for every commit: exactly one gitmoji from its list, an imperative subject of at most 72 characters, one logical change per commit.
+- Always work and commit directly on `main`, without a separate branch.
 - Commit only when the user asks. Propose the split first; every commit must build and pass the unit tests on its own.
 - Work in milestones. After each one: build, run the unit tests, test the UI on the emulator, then report to the user, who tests on a real phone (see Testing).
 - Keep permissions to the minimum the app needs. Don't add broad ones like `READ_MEDIA_IMAGES` just to improve a feature; e.g. the gallery button only shows photos taken in the current session on purpose.
