@@ -1,11 +1,16 @@
 package kiwi.lorenz.moocam.ui.camera
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,56 +19,58 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.unit.sp
 import kiwi.lorenz.moocam.R
 import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.audio.SoundChoice
 import kiwi.lorenz.moocam.flash.AttentionFlash
+import kiwi.lorenz.moocam.ui.TestTags
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
 
-// Tapping an option previews and selects it. Only Cancel and OK close the dialog, so a tap
-// next to it or the back button can't throw away the choice by accident.
-// Options must be saveable in a Bundle (e.g. enums or Serializable), to keep the pending
-// choice across configuration changes.
+// The middle of the edge that faces the settings rail
+private val pickerOrigin = TransformOrigin(1f, 0.5f)
+
+// Grows out of its button in the settings rail. Tapping an option applies it right away and
+// keeps the picker open, so several options can be tried and there's nothing to confirm.
 @Composable
-fun <T> OptionPickerDialog(
+fun <T> OptionPicker(
+    visible: Boolean,
     title: String,
     options: List<T>,
     selectedOption: T,
     label: (T) -> String,
     icon: (T) -> Int,
     onOptionTap: (T) -> Unit,
-    onConfirm: (T) -> Unit,
-    onDismiss: () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    Dialog(
-        onDismissRequest = {},
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(tween(150)) + scaleIn(tween(200), initialScale = 0.6f, transformOrigin = pickerOrigin),
+        exit = fadeOut(tween(100)) + scaleOut(tween(150), targetScale = 0.6f, transformOrigin = pickerOrigin)
     ) {
-        OptionPickerContent(title, options, selectedOption, label, icon, onOptionTap, onConfirm, onDismiss)
+        OptionPickerContent(title, options, selectedOption, label, icon, onOptionTap)
     }
 }
 
@@ -74,88 +81,54 @@ private fun <T> OptionPickerContent(
     selectedOption: T,
     label: (T) -> String,
     icon: (T) -> Int,
-    onOptionTap: (T) -> Unit,
-    onConfirm: (T) -> Unit,
-    onDismiss: () -> Unit
+    onOptionTap: (T) -> Unit
 ) {
-    // Only applied when OK is tapped; Cancel keeps the previous option
-    var pendingOption by rememberSaveable { mutableStateOf(selectedOption) }
-
     Column(
         modifier = Modifier
-            .background(colorResource(R.color.off_white), RoundedCornerShape(24.dp))
-            .padding(spacing.large)
+            .width(200.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Black.copy(alpha = 0.7f))
+            .padding(spacing.small)
+            .testTag(TestTags.OPTION_PICKER)
+            .semantics { paneTitle = title }
+            .selectableGroup()
     ) {
-        Text(
-            text = title,
-            style = AppTheme.typography.headlineMedium,
-            color = colorResource(R.color.dark_charcoal)
-        )
-        Spacer(Modifier.height(spacing.medium))
-        Column(
-            modifier = Modifier.selectableGroup(),
-            verticalArrangement = Arrangement.spacedBy(spacing.extraSmall)
-        ) {
-            options.forEach { option ->
-                val isSelected = option == pendingOption
-                val shape = RoundedCornerShape(12.dp)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(shape)
-                        // Unselected rows get an invisible border, so nothing shifts on selection
-                        .border(
-                            width = 2.dp,
-                            color = if (isSelected) colorResource(R.color.kiwi_green) else Color.Transparent,
-                            shape = shape
-                        )
-                        .selectable(
-                            selected = isSelected,
-                            role = Role.RadioButton,
-                            onClick = {
-                                pendingOption = option
-                                onOptionTap(option)
-                            }
-                        )
-                        .padding(horizontal = spacing.medium),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(icon(option)),
-                        contentDescription = null,
-                        tint = colorResource(R.color.dark_charcoal),
-                        modifier = Modifier.size(28.dp)
+        options.forEachIndexed { index, option ->
+            val isSelected = option == selectedOption
+            val background by animateColorAsState(
+                targetValue = if (isSelected) colorResource(R.color.kiwi_green) else Color.Transparent,
+                label = "optionBackground"
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(background)
+                    .selectable(
+                        selected = isSelected,
+                        role = Role.RadioButton,
+                        onClick = { onOptionTap(option) }
                     )
-                    Spacer(Modifier.width(spacing.medium))
-                    Text(
-                        text = label(option),
-                        style = AppTheme.typography.bodyLarge,
-                        color = colorResource(R.color.dark_charcoal)
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(spacing.medium))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(android.R.string.cancel),
-                    color = colorResource(R.color.dark_charcoal)
-                )
-            }
-            Spacer(Modifier.width(spacing.small))
-            Button(
-                onClick = { onConfirm(pendingOption) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(R.color.kiwi_green),
-                    contentColor = colorResource(R.color.off_white)
-                )
+                    .testTag(TestTags.option(index))
+                    .padding(horizontal = spacing.small),
+                horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(android.R.string.ok))
+                Icon(
+                    painter = painterResource(icon(option)),
+                    contentDescription = null,
+                    tint = colorResource(R.color.off_white),
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = label(option),
+                    style = AppTheme.typography.bodyLarge,
+                    color = colorResource(R.color.off_white),
+                    maxLines = 1,
+                    // Shrinks with a large font size, where a long label wouldn't fit the row
+                    autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = 15.sp)
+                )
             }
         }
     }
@@ -171,9 +144,7 @@ private fun PreviewSoundPicker() {
             selectedOption = SoundChoice.Surprise,
             label = { it.displayName },
             icon = { it.iconRes },
-            onOptionTap = {},
-            onConfirm = {},
-            onDismiss = {}
+            onOptionTap = {}
         )
     }
 }
@@ -188,9 +159,7 @@ private fun PreviewFlashPicker() {
             selectedOption = AttentionFlash.THREE_SHORT,
             label = { it.displayName },
             icon = { it.iconRes },
-            onOptionTap = {},
-            onConfirm = {},
-            onDismiss = {}
+            onOptionTap = {}
         )
     }
 }

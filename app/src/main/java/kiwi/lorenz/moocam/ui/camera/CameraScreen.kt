@@ -12,6 +12,7 @@ import android.util.Size
 import android.view.OrientationEventListener
 import android.view.Surface
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -150,84 +151,90 @@ fun CameraScreen(
     val isFocusLocked by viewModel.isFocusLocked.collectAsStateWithLifecycle()
     val hasFlashUnit by viewModel.hasFlashUnit.collectAsStateWithLifecycle()
     val selectedFlash by viewModel.selectedFlash.collectAsStateWithLifecycle()
-    var showSoundPicker by rememberSaveable { mutableStateOf(false) }
-    var showFlashPicker by rememberSaveable { mutableStateOf(false) }
     val captureMode by viewModel.captureMode.collectAsStateWithLifecycle()
-    var showCaptureModePicker by rememberSaveable { mutableStateOf(false) }
+    var openSetting by rememberSaveable { mutableStateOf<ViewfinderSetting?>(null) }
+    BackHandler(enabled = openSetting != null) { openSetting = null }
+
+    // Top to bottom in the rail
+    val settings = listOfNotNull(
+        ViewfinderSetting.SOUND,
+        ViewfinderSetting.FLASH.takeIf { hasFlashUnit },
+        ViewfinderSetting.CAPTURE_MODE
+    )
 
     CameraScreenContent(
         onCaptureButtonTap = {
+            openSetting = null
             viewModel.buttonTapped()
         },
         cameraState = cameraState,
         timerState = timerState,
         delays = viewModel.delays,
         selectedDelay = selectedDelay, // is passing the Int directly best practice here?
-        onDelayChange = { newDelay -> viewModel.setDelay(newDelay)},
+        onDelayChange = { newDelay ->
+            openSetting = null
+            viewModel.setDelay(newDelay)
+        },
         isVolumeTooLow = isVolumeTooLow,
         isPrivateOutputConnected = isPrivateOutputConnected,
         lastPhotoUri = lastPhotoUri,
-        onGalleryButtonTap = { uri -> openInGallery(context, uri) },
+        onGalleryButtonTap = { uri ->
+            openSetting = null
+            openInGallery(context, uri)
+        },
         selectedSound = selectedSound,
-        onSoundLabelTap = { showSoundPicker = true },
         selectedFlash = selectedFlash.takeIf { hasFlashUnit },
-        onFlashLabelTap = { showFlashPicker = true },
         captureMode = captureMode,
-        onCaptureModeTap = { showCaptureModePicker = true },
+        openSetting = openSetting,
+        onSettingTap = { setting -> openSetting = setting.takeIf { it != openSetting } },
+        onPickerDismiss = { openSetting = null },
+        settingPickers = {
+            val railMargin = spacing.medium
+            val pickerModifier = { setting: ViewfinderSetting ->
+                besideRailButton(settings.indexOf(setting), settings.size, railMargin)
+            }
+            OptionPicker(
+                visible = openSetting == ViewfinderSetting.SOUND,
+                title = stringResource(R.string.choose_sound),
+                options = viewModel.sounds,
+                selectedOption = selectedSound,
+                label = { it.displayName },
+                icon = { it.iconRes },
+                onOptionTap = { sound ->
+                    viewModel.setSound(sound)
+                    viewModel.previewSound(sound)
+                },
+                modifier = pickerModifier(ViewfinderSetting.SOUND)
+            )
+            OptionPicker(
+                visible = openSetting == ViewfinderSetting.FLASH,
+                title = stringResource(R.string.choose_flash),
+                options = viewModel.flashes,
+                selectedOption = selectedFlash,
+                label = { it.displayName },
+                icon = { it.iconRes },
+                onOptionTap = { flash ->
+                    viewModel.setFlash(flash)
+                    viewModel.previewFlash(flash)
+                },
+                modifier = pickerModifier(ViewfinderSetting.FLASH)
+            )
+            OptionPicker(
+                visible = openSetting == ViewfinderSetting.CAPTURE_MODE,
+                title = stringResource(R.string.choose_capture_mode),
+                options = viewModel.captureModes,
+                selectedOption = captureMode,
+                label = { it.displayName },
+                icon = { it.iconRes },
+                onOptionTap = { mode -> viewModel.setCaptureMode(mode) },
+                modifier = pickerModifier(ViewfinderSetting.CAPTURE_MODE)
+            )
+        },
         zoom = zoom,
         onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
         onTapToFocus = { point -> viewModel.focusOn(point) },
         isFocusLocked = isFocusLocked
     )
-
-    if (showSoundPicker) {
-        OptionPickerDialog(
-            title = stringResource(R.string.choose_sound),
-            options = viewModel.sounds,
-            selectedOption = selectedSound,
-            label = { it.displayName },
-            icon = { it.iconRes },
-            onOptionTap = { sound -> viewModel.previewSound(sound) },
-            onConfirm = { sound ->
-                viewModel.setSound(sound)
-                showSoundPicker = false
-            },
-            onDismiss = { showSoundPicker = false }
-        )
-    }
-
-    if (showFlashPicker) {
-        OptionPickerDialog(
-            title = stringResource(R.string.choose_flash),
-            options = viewModel.flashes,
-            selectedOption = selectedFlash,
-            label = { it.displayName },
-            icon = { it.iconRes },
-            onOptionTap = { flash -> viewModel.previewFlash(flash) },
-            onConfirm = { flash ->
-                viewModel.setFlash(flash)
-                showFlashPicker = false
-            },
-            onDismiss = { showFlashPicker = false }
-        )
-    }
-
-    if (showCaptureModePicker) {
-        OptionPickerDialog(
-            title = stringResource(R.string.choose_capture_mode),
-            options = viewModel.captureModes,
-            selectedOption = captureMode,
-            label = { it.displayName },
-            icon = { it.iconRes },
-            // Nothing to preview; tapping only selects
-            onOptionTap = {},
-            onConfirm = { mode ->
-                viewModel.setCaptureMode(mode)
-                showCaptureModePicker = false
-            },
-            onDismiss = { showCaptureModePicker = false }
-        )
-    }
 }
 
 // The activity is locked to portrait, so the display never rotates. Read how the device is
@@ -291,12 +298,13 @@ private fun CameraScreenContent(
     lastPhotoUri: Uri?,
     onGalleryButtonTap: (Uri) -> Unit,
     selectedSound: SoundChoice,
-    onSoundLabelTap: () -> Unit,
     // Null hides the flash button, for phones without a flashlight
     selectedFlash: AttentionFlash?,
-    onFlashLabelTap: () -> Unit,
     captureMode: CaptureMode,
-    onCaptureModeTap: () -> Unit,
+    openSetting: ViewfinderSetting?,
+    onSettingTap: (ViewfinderSetting) -> Unit,
+    onPickerDismiss: () -> Unit,
+    settingPickers: @Composable BoxScope.() -> Unit,
     zoom: ZoomUiState?,
     onZoomPresetTap: (Float) -> Unit,
     onTapToFocus: (MeteringPoint) -> Unit,
@@ -314,6 +322,31 @@ private fun CameraScreenContent(
             .statusBarsPadding()) {
             // Drawn on top of the viewfinder
             val viewfinderOverlay: @Composable BoxScope.() -> Unit = {
+                zoom?.let {
+                    ZoomPresetRow(
+                        zoom = it,
+                        onPresetTap = onZoomPresetTap,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(spacing.medium)
+                    )
+                }
+                // Invisible. On top of the viewfinder and the zoom presets, so a tap there only
+                // closes the picker; the rail stays usable to switch to another picker
+                if (openSetting != null) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .testTag(TestTags.CLOSE_OPTION_PICKER)
+                            .clickable(
+                                interactionSource = null,
+                                indication = null,
+                                onClickLabel = stringResource(R.string.close_options),
+                                onClick = onPickerDismiss
+                            )
+                    )
+                }
+                settingPickers()
                 SettingsRail(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -324,7 +357,8 @@ private fun CameraScreenContent(
                         caption = selectedSound.displayName,
                         onClickLabel = stringResource(R.string.choose_sound),
                         enabled = timerState is TimerState.Idle,
-                        onClick = onSoundLabelTap,
+                        isOpen = openSetting == ViewfinderSetting.SOUND,
+                        onClick = { onSettingTap(ViewfinderSetting.SOUND) },
                         modifier = Modifier.testTag(TestTags.SOUND_BUTTON)
                     )
                     selectedFlash?.let { flash ->
@@ -333,7 +367,8 @@ private fun CameraScreenContent(
                             caption = flash.shortName,
                             onClickLabel = stringResource(R.string.choose_flash),
                             enabled = timerState is TimerState.Idle,
-                            onClick = onFlashLabelTap,
+                            isOpen = openSetting == ViewfinderSetting.FLASH,
+                            onClick = { onSettingTap(ViewfinderSetting.FLASH) },
                             modifier = Modifier.testTag(TestTags.FLASH_BUTTON)
                         )
                     }
@@ -343,20 +378,12 @@ private fun CameraScreenContent(
                         caption = captureMode.photoCount.toString(),
                         onClickLabel = stringResource(R.string.choose_capture_mode),
                         enabled = timerState is TimerState.Idle,
-                        onClick = onCaptureModeTap,
+                        isOpen = openSetting == ViewfinderSetting.CAPTURE_MODE,
+                        onClick = { onSettingTap(ViewfinderSetting.CAPTURE_MODE) },
                         onLongClick = stockViewfinderPhoto?.let { { showStockPhoto = !showStockPhoto } },
                         modifier = Modifier
                             .testTag(TestTags.CAPTURE_MODE_BUTTON)
                             .semantics { contentDescription = captureMode.displayName }
-                    )
-                }
-                zoom?.let {
-                    ZoomPresetRow(
-                        zoom = it,
-                        onPresetTap = onZoomPresetTap,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(spacing.medium)
                     )
                 }
             }
@@ -679,11 +706,12 @@ private fun PreviewCameraScreen() {
             lastPhotoUri = null,
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
-            onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
-            onFlashLabelTap = {},
             captureMode = CaptureMode.BURST_3,
-            onCaptureModeTap = {},
+            openSetting = null,
+            onSettingTap = {},
+            onPickerDismiss = {},
+            settingPickers = {},
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -707,11 +735,12 @@ private fun PreviewCameraScreenLoading() {
             lastPhotoUri = null,
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
-            onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
-            onFlashLabelTap = {},
             captureMode = CaptureMode.BURST_3,
-            onCaptureModeTap = {},
+            openSetting = null,
+            onSettingTap = {},
+            onPickerDismiss = {},
+            settingPickers = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -736,11 +765,12 @@ private fun PreviewCameraScreenError() {
             lastPhotoUri = null,
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
-            onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
-            onFlashLabelTap = {},
             captureMode = CaptureMode.BURST_3,
-            onCaptureModeTap = {},
+            openSetting = null,
+            onSettingTap = {},
+            onPickerDismiss = {},
+            settingPickers = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -764,11 +794,12 @@ private fun PreviewCameraScreenVolumeTooLow() {
             lastPhotoUri = null,
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
-            onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
-            onFlashLabelTap = {},
             captureMode = CaptureMode.BURST_3,
-            onCaptureModeTap = {},
+            openSetting = null,
+            onSettingTap = {},
+            onPickerDismiss = {},
+            settingPickers = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},
@@ -792,11 +823,12 @@ private fun PreviewCameraScreenPrivateOutput() {
             lastPhotoUri = null,
             onGalleryButtonTap = {},
             selectedSound = SoundChoice.Fixed(AnimalSound.MOO),
-            onSoundLabelTap = {},
             selectedFlash = AttentionFlash.THREE_SHORT,
-            onFlashLabelTap = {},
             captureMode = CaptureMode.BURST_3,
-            onCaptureModeTap = {},
+            openSetting = null,
+            onSettingTap = {},
+            onPickerDismiss = {},
+            settingPickers = {},
             zoom = null,
             onZoomPresetTap = {},
             onTapToFocus = {},

@@ -39,6 +39,7 @@ import kiwi.lorenz.moocam.flash.AttentionFlash
 import kiwi.lorenz.moocam.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -437,6 +438,8 @@ class CameraViewModel @Inject constructor(
     private fun startCountdown(seconds: Int) {
         countdownJob?.cancel()
         countdownJob = viewModelScope.launch {
+            // Waits for the preview to turn the light off, or it would cut the flash short
+            flashPreviewJob?.cancelAndJoin()
             for (i in seconds downTo 1) {
                 _timerState.value = TimerState.Counting(i)
                 if (i == 2) {

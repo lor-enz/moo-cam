@@ -1,11 +1,14 @@
 package kiwi.lorenz.moocam.ui.camera
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +16,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -22,6 +26,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kiwi.lorenz.moocam.R
@@ -29,6 +34,11 @@ import kiwi.lorenz.moocam.audio.AnimalSound
 import kiwi.lorenz.moocam.ui.theme.AppTheme
 import kiwi.lorenz.moocam.ui.theme.AppTheme.spacing
 import kiwi.lorenz.moocam.ui.theme.MooCamTheme
+
+private val RailButtonSize = 56.dp
+private val RailGap = 8.dp
+
+enum class ViewfinderSetting { SOUND, FLASH, CAPTURE_MODE }
 
 // Stacks the settings on the viewfinder
 @Composable
@@ -38,13 +48,21 @@ fun SettingsRail(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(spacing.small),
+        verticalArrangement = Arrangement.spacedBy(RailGap),
         content = content
     )
 }
 
-// Shows a current choice, e.g. the sound that plays before the photo; tapping it opens the
-// matching picker
+// Places a picker beside a button of the rail, centered on it. The rail is centered at the
+// end of the same box, [railMargin] away from the edge.
+fun BoxScope.besideRailButton(index: Int, buttonCount: Int, railMargin: Dp): Modifier =
+    Modifier
+        .align(Alignment.CenterEnd)
+        .padding(end = railMargin + RailButtonSize + RailGap)
+        .offset(y = (RailButtonSize + RailGap) * (index - (buttonCount - 1) / 2f))
+
+// Shows a current choice, e.g. the sound that plays before the photo; tapping it opens or
+// closes the matching picker
 @Composable
 fun SettingsRailButton(
     @DrawableRes iconRes: Int,
@@ -53,15 +71,20 @@ fun SettingsRailButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isOpen: Boolean = false,
     // Null disables the long press
     onLongClick: (() -> Unit)? = null
 ) {
+    val background by animateColorAsState(
+        targetValue = if (isOpen) colorResource(R.color.kiwi_green) else Color.Black.copy(alpha = 0.5f),
+        label = "railButtonBackground"
+    )
     Column(
         modifier = modifier
-            .size(56.dp)
+            .size(RailButtonSize)
             .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(background)
             .combinedClickable(
                 enabled = enabled,
                 onClickLabel = onClickLabel,

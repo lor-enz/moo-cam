@@ -29,7 +29,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 
 ## Project notes
 
-None yet.
+- The option pickers are popovers inside the viewfinder, not dialogs: a tap applies an option at once, so nothing needs OK or Cancel. The camera stays usable while one is open, so the countdown has to stop a running flash preview first.
 
 ## Known issues
 
@@ -37,8 +37,7 @@ None yet.
 
 ## Planned changes
 
-Revamp of the viewfinder settings, in milestones the user tests on a phone. The settings rail is done.
+Revamp of the viewfinder settings, in milestones the user tests on a phone. The settings rail and the pickers are done.
 
-- Popover list instead of the dialogs, growing out of the tapped button. A tap applies and previews; no OK or Cancel. A tap on the viewfinder only closes it.
 - Rotate the signage by device orientation, with hysteresis, while the layout stays in portrait: rail, zoom, timer, countdown, gallery thumbnail.
 - Rotate the popover and the volume warning as a whole, and show the headphone banner over the viewfinder in landscape. Turning the phone closes an open popover. Toasts and permission screens stay as they are.
