@@ -26,6 +26,9 @@ object AppColors {
     val overlayBackground = Color.Black.copy(alpha = 0.7f)
     val thumbnailPlaceholder = Color.White.copy(alpha = 0.1f)
 
+    // Round buttons beside the capture button, e.g. to switch cameras
+    val sideButton = Color.White.copy(alpha = 0.1f)
+
     // Dims the screen behind a panel
     val scrim = Color.Black.copy(alpha = 0.4f)
     val panel = Cream

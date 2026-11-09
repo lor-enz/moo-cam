@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.camera.core.AspectRatio
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.MeteringPoint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,7 +102,8 @@ fun CameraScreen(
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
+    val lensFacing by viewModel.lensFacing.collectAsStateWithLifecycle()
+    LaunchedEffect(lifecycleOwner, lensFacing) {
         viewModel.bindCamera(lifecycleOwner)
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
@@ -155,6 +157,7 @@ fun CameraScreen(
     val hasFlashUnit by viewModel.hasFlashUnit.collectAsStateWithLifecycle()
     val selectedFlash by viewModel.selectedFlash.collectAsStateWithLifecycle()
     val captureMode by viewModel.captureMode.collectAsStateWithLifecycle()
+    val hasFrontCamera by viewModel.hasFrontCamera.collectAsStateWithLifecycle()
     var openSetting by rememberSaveable { mutableStateOf<ViewfinderSetting?>(null) }
     BackHandler(enabled = openSetting != null) { openSetting = null }
     // Simpler than moving an open picker along; it reopens the right way up
@@ -239,7 +242,12 @@ fun CameraScreen(
             zoom = zoom,
             onZoomPresetTap = { ratio -> viewModel.setZoom(ratio) },
             onTapToFocus = { point -> viewModel.focusOn(point) },
-            isFocusLocked = isFocusLocked
+            isFocusLocked = isFocusLocked,
+            isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT,
+            onSwitchCameraTap = {
+                openSetting = null
+                viewModel.switchCamera()
+            }.takeIf { hasFrontCamera }
         )
     }
 }
@@ -310,6 +318,9 @@ private fun CameraScreenContent(
     onZoomPresetTap: (Float) -> Unit,
     onTapToFocus: (MeteringPoint) -> Unit,
     isFocusLocked: Boolean = false,
+    isFrontCamera: Boolean = false,
+    // Null hides the switch button, for phones without a selfie camera
+    onSwitchCameraTap: (() -> Unit)? = null,
     // A real viewfinder can't render in previews; set false to preview the Loading/Error layouts
     showFakeViewfinder: Boolean = LocalInspectionMode.current
 ) {
@@ -507,7 +518,16 @@ private fun CameraScreenContent(
                         onClick = onCaptureButtonTap,
                         timerState = timerState,
                     )
-                    Spacer(Modifier.weight(1f))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        onSwitchCameraTap?.let { onClick ->
+                            SwitchCameraButton(
+                                isFrontCamera = isFrontCamera,
+                                enabled = timerState is TimerState.Idle,
+                                onClick = onClick,
+                                modifier = Modifier.testTag(TestTags.SWITCH_CAMERA_BUTTON)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(spacing.large))
@@ -640,6 +660,39 @@ private fun GalleryButton(
     }
 }
 
+// Switches between the back and the selfie camera
+@Composable
+private fun SwitchCameraButton(
+    isFrontCamera: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .upright()
+            .alpha(if (enabled) 1f else 0.4f)
+            .clip(CircleShape)
+            .background(AppColors.sideButton)
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.flip_camera),
+            contentDescription = stringResource(
+                if (isFrontCamera) R.string.switch_to_back_camera else R.string.switch_to_front_camera
+            ),
+            tint = AppColors.onDark,
+            modifier = Modifier.size(28.dp)
+        )
+    }
+}
+
 // Prefer the camera roll review intent (lets you swipe through photos in e.g. Google Photos),
 // fall back to a plain image viewer
 private fun openInGallery(context: Context, uri: Uri) {
@@ -741,6 +794,7 @@ private fun PreviewCameraScreen() {
             zoom = ZoomUiState(presets = listOf(0.5f, 1f, 5f), zoomRatio = 1f),
             onZoomPresetTap = {},
             onTapToFocus = {},
+            onSwitchCameraTap = {},
         )
     }
 }

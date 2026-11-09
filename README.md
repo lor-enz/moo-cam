@@ -37,6 +37,7 @@ Images
 - Show recently taken photos in-app
 - Tap to focus
 - Blinking flashlight in final countdown seconds
+- Selfie camera
 
 ## Releasing
 

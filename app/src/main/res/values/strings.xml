@@ -25,6 +25,8 @@
     <string name="choose_flash">Choose an attention flash</string>
     <string name="choose_capture_mode">Single photo or burst</string>
     <string name="close_options">Close the options</string>
+    <string name="switch_to_front_camera">Switch to the selfie camera</string>
+    <string name="switch_to_back_camera">Switch to the back camera</string>
 
 
 </resources>

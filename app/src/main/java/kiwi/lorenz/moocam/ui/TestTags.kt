@@ -8,6 +8,7 @@ object TestTags {
     const val OPTION_PICKER = "option_picker"
     const val CLOSE_OPTION_PICKER = "close_option_picker"
     const val PRIVATE_OUTPUT_BANNER = "private_output_banner"
+    const val SWITCH_CAMERA_BUTTON = "switch_camera_button"
 
     fun option(index: Int) = "option_$index"
 }

@@ -89,6 +89,14 @@ class CameraViewModel @Inject constructor(
     private val _zoom = MutableStateFlow<ZoomUiState?>(null)
     val zoom = _zoom.asStateFlow()
 
+    // Not stored: the app always starts with the back camera
+    private val _lensFacing = MutableStateFlow(CameraSelector.LENS_FACING_BACK)
+    val lensFacing = _lensFacing.asStateFlow()
+
+    // Phones without a selfie camera don't get the switch button; false until the camera is bound
+    private val _hasFrontCamera = MutableStateFlow(false)
+    val hasFrontCamera = _hasFrontCamera.asStateFlow()
+
     // Hard coded on purpose. 2 is the shortest that works: the sound plays with 2 seconds left.
     val delays = arrayOf(2, 5, 7, 10, 15)
     private val defaultDelay = 10
@@ -163,16 +171,25 @@ class CameraViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
 
+    // Binds the camera of lensFacing; call again after switching cameras
     fun bindCamera(lifecycleOwner: LifecycleOwner) {
-        _cameraState.value = CameraScreenState.Loading
+        // When switching cameras, the old viewfinder stays until the new one is ready, so the
+        // controls below don't disappear for a moment
+        if (camera == null) _cameraState.value = CameraScreenState.Loading
         _isFocusLocked.value = false
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
             try {
                 cameraProvider = cameraProviderFuture.get()
+                _hasFrontCamera.value = runCatching {
+                    cameraProvider!!.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
+                }.getOrDefault(false)
 
-                val aspectRatio = resolveSensorAspectRatio(cameraProvider!!)
+                val cameraSelector = CameraSelector.Builder()
+                    .requireLensFacing(_lensFacing.value)
+                    .build()
+                val aspectRatio = resolveSensorAspectRatio(cameraProvider!!, cameraSelector)
                 val resolutionSelector = ResolutionSelector.Builder()
                     .setAspectRatioStrategy(
                         if (aspectRatio == AspectRatio.RATIO_4_3)
@@ -202,7 +219,7 @@ class CameraViewModel @Inject constructor(
                     .build()
                 val camera = cameraProvider!!.bindToLifecycle(
                     lifecycleOwner = lifecycleOwner,
-                    cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+                    cameraSelector = cameraSelector,
                     imageCapture, preview
                 )
                 this.camera = camera
@@ -229,6 +246,17 @@ class CameraViewModel @Inject constructor(
                     CameraScreenState.Error(e.message ?: "Unable to initialize camera")
             }
         }, android.os.Handler(android.os.Looper.getMainLooper())::post)
+    }
+
+    // Photos from the selfie camera aren't mirrored, like the system camera app's. Only the
+    // viewfinder shows them mirrored.
+    fun switchCamera() {
+        // A flash preview on the torch of the old camera would end with the camera anyway
+        flashPreviewJob?.cancel()
+        _lensFacing.value = if (_lensFacing.value == CameraSelector.LENS_FACING_BACK)
+            CameraSelector.LENS_FACING_FRONT
+        else
+            CameraSelector.LENS_FACING_BACK
     }
 
     fun setZoom(ratio: Float) {
@@ -271,12 +299,15 @@ class CameraViewModel @Inject constructor(
     }
 
     @OptIn1(ExperimentalCamera2Interop::class)
-    private fun resolveSensorAspectRatio(cameraProvider: ProcessCameraProvider): Int {
-        val backCameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
-            CameraSelector.DEFAULT_BACK_CAMERA.filter(listOf(it)).isNotEmpty()
+    private fun resolveSensorAspectRatio(
+        cameraProvider: ProcessCameraProvider,
+        cameraSelector: CameraSelector
+    ): Int {
+        val cameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
+            cameraSelector.filter(listOf(it)).isNotEmpty()
         } ?: return AspectRatio.RATIO_4_3
 
-        val sensorRect = Camera2CameraInfo.from(backCameraInfo)
+        val sensorRect = Camera2CameraInfo.from(cameraInfo)
             .getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
             ?: return AspectRatio.RATIO_4_3
 
