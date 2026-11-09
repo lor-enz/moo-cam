@@ -49,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -137,9 +138,10 @@ class CameraViewModel @Inject constructor(
     // queues them, so the burst just takes a bit longer.
     private val burstIntervalMillis = 300L
 
-    // Last photo taken in this session, shown in the gallery button
-    private val _lastPhotoUri = MutableStateFlow<Uri?>(null)
-    val lastPhotoUri = _lastPhotoUri.asStateFlow()
+    // Last photo taken, shown in the gallery button. Stored, so it's still there after a restart.
+    val lastPhotoUri = settingsRepository.lastPhotoUri
+        .map { it?.let(Uri::parse) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // Below this media volume the moo is too quiet to catch a kid's attention
     private val minMediaVolume = 0.2f
@@ -314,7 +316,9 @@ class CameraViewModel @Inject constructor(
                     }
 
                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                        _lastPhotoUri.value = outputFileResults.savedUri
+                        outputFileResults.savedUri?.let { uri ->
+                            viewModelScope.launch { settingsRepository.setLastPhotoUri(uri.toString()) }
+                        }
                         _events.trySend(CameraEvent.PhotoSaved)
                         if (continuation.isActive) continuation.resume(true)
                     }
@@ -342,15 +346,17 @@ class CameraViewModel @Inject constructor(
 
     // The photo may have been deleted in the gallery app meanwhile; then go back to the placeholder
     fun refreshLastPhoto() {
-        val uri = _lastPhotoUri.value ?: return
         viewModelScope.launch {
+            // Read from the store, as lastPhotoUri may not be loaded yet right after the start
+            val stored = settingsRepository.lastPhotoUri.first() ?: return@launch
+            val uri = Uri.parse(stored)
             val exists = withContext(Dispatchers.IO) {
                 runCatching {
                     context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
                         ?.use { it.moveToFirst() } == true
                 }.getOrDefault(false)
             }
-            if (!exists && _lastPhotoUri.value == uri) _lastPhotoUri.value = null
+            if (!exists) settingsRepository.clearLastPhotoUri(stored)
         }
     }
 

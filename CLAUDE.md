@@ -10,7 +10,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 - Always work and commit directly on `main`, without a separate branch.
 - Commit only when the user asks. Propose the split first; every commit must build and pass the unit tests on its own.
 - Work in milestones. After each one: build, run the unit tests, test the UI on the emulator, then report to the user, who tests on a real phone (see Testing).
-- Keep permissions to the minimum the app needs. Don't add broad ones like `READ_MEDIA_IMAGES` just to improve a feature; e.g. the gallery button only shows photos taken in the current session on purpose.
+- Keep permissions to the minimum the app needs. Don't add broad ones like `READ_MEDIA_IMAGES` just to improve a feature; e.g. the gallery button only shows the last photo the app took itself, on purpose.
 - Packages are by feature: `audio` (animal sounds, audio output), `flash` (the blinking flashlight), `capture` (capture modes), `settings` (stored choices). Screens live in `ui/<screen>` (`camera`, `permission`) with their view models; `ui` itself holds only what several screens share (`SegmentedControl`, `theme`). `di` holds the Hilt modules. Put a new file in the package of its feature, or propose a new one when it fits none.
 - Check the package of every file you touch: a file used by only one feature belongs in that feature's package, one used by several goes up to `ui`. If a move is advised, ask the user first, and move in a `🚚` commit of its own (moves only, so blame follows the rename).
 - Give new UI elements a test tag in `ui/TestTags.kt` in the same change that adds them, so they can be driven by adb (see Testing).
@@ -33,6 +33,7 @@ Built with Kotlin, Jetpack Compose, CameraX and Hilt. Requires Android 10 (API 2
 - Release builds run R8 (shrinking, obfuscation, resource shrinking), which Google Play requires by Feb 2027. It doesn't run on debug builds, so reflection and name lookups only break in a release build; test those there. The bundle carries `mapping.txt`, so Play can translate stack traces.
 - The option pickers are popovers inside the viewfinder, not dialogs: a tap applies an option at once, so nothing needs OK or Cancel. The camera stays usable while one is open, so the countdown has to stop a running flash preview first.
 - The layout stays in portrait; `Modifier.upright()` turns signage by how the device is held, and `uprightPanel()` also swaps the size of elements that aren't square. Rotation switches 15° past the middle between two orientations, so it can't flicker. Photos use the same value, so they always match what the screen shows. Toasts and permission screens don't turn.
+- The gallery button's photo URI is stored with the settings, so it survives restarts. Reading its own photos needs no permission, but after a reinstall the app no longer owns them, so the button starts empty.
 - The app has one dark look: a cream accent on charcoal, with no light theme and no dynamic color. Colors live in `AppColors` (`ui/theme/Color.kt`). Cream on dark needs its backing, so accents sit on the bar or an overlay, and content on the accent uses `onAccent`.
 
 ## Known issues

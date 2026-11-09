@@ -28,6 +28,7 @@ class SettingsRepository @Inject constructor(
     private val selectedDelayKey = intPreferencesKey("selected_delay")
     private val selectedFlashKey = stringPreferencesKey("selected_flash")
     private val captureModeKey = stringPreferencesKey("capture_mode")
+    private val lastPhotoUriKey = stringPreferencesKey("last_photo_uri")
 
     // Saved in the sound's place; no AnimalSound has this name
     private val surpriseValue = "SURPRISE"
@@ -60,6 +61,11 @@ class SettingsRepository @Inject constructor(
         .map { prefs -> CaptureMode.entries.find { it.name == prefs[captureModeKey] } }
         .distinctUntilChanged()
 
+    // Not a choice, but kept here so the gallery button still shows the last photo after a restart
+    val lastPhotoUri: Flow<String?> = prefs
+        .map { prefs -> prefs[lastPhotoUriKey] }
+        .distinctUntilChanged()
+
     suspend fun setSelectedSound(choice: SoundChoice) {
         val value = when (choice) {
             is SoundChoice.Fixed -> choice.sound.name
@@ -78,5 +84,14 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setCaptureMode(mode: CaptureMode) {
         dataStore.edit { it[captureModeKey] = mode.name }
+    }
+
+    suspend fun setLastPhotoUri(uri: String) {
+        dataStore.edit { it[lastPhotoUriKey] = uri }
+    }
+
+    // Only if it's still that photo, so one taken meanwhile isn't forgotten
+    suspend fun clearLastPhotoUri(uri: String) {
+        dataStore.edit { if (it[lastPhotoUriKey] == uri) it.remove(lastPhotoUriKey) }
     }
 }
