@@ -1,0 +1,10 @@
+# How to work here
+
+- Commit messages use [gitmoji](https://gitmoji.dev). Follow the rules in [`gitmoji.md`](../gitmoji.md) for every commit: exactly one gitmoji from its list, an imperative subject of at most 72 characters, one logical change per commit.
+- Always work and commit directly on `main`, without a separate branch.
+- Commit only when the user asks. Propose the split first; every commit must build and pass the unit tests on its own.
+- Work in milestones. After each one: build, run the unit tests, test the UI on the emulator, then report to the user, who tests on a real phone (see [Testing](testing.md)).
+- Packages are by feature: `audio` (animal sounds, audio output), `flash` (the blinking flashlight), `capture` (capture modes), `settings` (stored choices). Screens live in `ui/<screen>` (`camera`, `permission`) with their view models; `ui` itself holds only what several screens share (`SegmentedControl`, `theme`). `di` holds the Hilt modules. Put a new file in the package of its feature, or propose a new one when it fits none.
+- Check the package of every file you touch: a file used by only one feature belongs in that feature's package, one used by several goes up to `ui`. If a move is advised, ask the user first, and move in a `🚚` commit of its own (moves only, so blame follows the rename).
+- Give new UI elements a test tag in `ui/TestTags.kt` in the same change that adds them, so they can be driven by adb (see [Testing](testing.md)).
+- Record decisions and findings as they come up in the note of their feature in `notes/`; add a new note to [the index](index.md) and any rule that applies everywhere to [the rules](rules.md). Things tried and dropped go in [decided-against.md](decided-against.md), bugs in [known-issues.md](known-issues.md), ideas in [planned.md](planned.md). Update the notes and the readme in the commit they belong to, not in a separate one. Keep entries short and remove ones that no longer apply, so the notes that load every session stay small.
