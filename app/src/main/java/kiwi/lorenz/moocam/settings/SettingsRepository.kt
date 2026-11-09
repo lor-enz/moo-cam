@@ -51,9 +51,15 @@ class SettingsRepository @Inject constructor(
         .map { prefs -> prefs[selectedDelayKey] }
         .distinctUntilChanged()
 
+    // Flashes that were replaced, by their stored name, so whoever chose one keeps a flash
+    private val replacedFlashes = mapOf("THREE_SHORT" to AttentionFlash.TWO)
+
     // Stored by enum name, like the sound
     val selectedFlash: Flow<AttentionFlash?> = prefs
-        .map { prefs -> AttentionFlash.entries.find { it.name == prefs[selectedFlashKey] } }
+        .map { prefs ->
+            val saved = prefs[selectedFlashKey]
+            AttentionFlash.entries.find { it.name == saved } ?: replacedFlashes[saved]
+        }
         .distinctUntilChanged()
 
     // Stored by enum name, like the sound

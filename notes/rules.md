@@ -7,4 +7,5 @@ Rules that apply everywhere. The rules for how to work and test are in [How to w
 - Cream accents only on the bar or an overlay; content on them uses `onAccent`. → [Theme](theme.md)
 - Pickers are popovers that apply on tap; no dialogs, no OK or Cancel. → [Option pickers](option-pickers.md)
 - The layout stays in portrait; turn signage with `upright()` / `uprightPanel()`, not by rotating the screen. → [Orientation](orientation.md)
+- Nothing blinks more than 3 times a second, as that can trigger seizures; the selfie camera doesn't flash at all. → [Decided against](decided-against.md)
 - Test reflection and name lookups in a release build; debug builds skip R8. → [Release builds](release-builds.md)

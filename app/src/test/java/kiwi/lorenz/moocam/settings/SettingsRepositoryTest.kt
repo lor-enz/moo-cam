@@ -1,6 +1,11 @@
 package kiwi.lorenz.moocam.settings
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kiwi.lorenz.moocam.flash.AttentionFlash
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,11 +25,12 @@ class SettingsRepositoryTest {
     val folder = TemporaryFolder()
 
     private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SettingsRepository
 
     @Before
     fun setUp() {
-        val dataStore = PreferenceDataStoreFactory.create(scope = scope) {
+        dataStore = PreferenceDataStoreFactory.create(scope = scope) {
             folder.newFile("settings.preferences_pb").apply { delete() }
         }
         repository = SettingsRepository(dataStore)
@@ -59,5 +65,23 @@ class SettingsRepositoryTest {
         repository.setLastPhotoUri("content://media/external/images/media/2")
         repository.clearLastPhotoUri("content://media/external/images/media/1")
         assertEquals("content://media/external/images/media/2", repository.lastPhotoUri.first())
+    }
+
+    @Test
+    fun selectedFlash_returnsTheSavedFlash() = runBlocking {
+        repository.setSelectedFlash(AttentionFlash.SHORT)
+        assertEquals(AttentionFlash.SHORT, repository.selectedFlash.first())
+    }
+
+    @Test
+    fun selectedFlash_replacesThreeShortFlashesWithTwo() = runBlocking {
+        dataStore.edit { it[stringPreferencesKey("selected_flash")] = "THREE_SHORT" }
+        assertEquals(AttentionFlash.TWO, repository.selectedFlash.first())
+    }
+
+    @Test
+    fun selectedFlash_isNullForAnUnknownName() = runBlocking {
+        dataStore.edit { it[stringPreferencesKey("selected_flash")] = "DISCO" }
+        assertNull(repository.selectedFlash.first())
     }
 }

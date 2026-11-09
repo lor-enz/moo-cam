@@ -161,7 +161,7 @@ private fun PreviewFlashPicker() {
         OptionPickerContent(
             title = stringResource(R.string.choose_flash),
             options = AttentionFlash.entries,
-            selectedOption = AttentionFlash.THREE_SHORT,
+            selectedOption = AttentionFlash.TWO,
             label = { it.displayName },
             icon = { it.iconRes },
             onOptionTap = {}

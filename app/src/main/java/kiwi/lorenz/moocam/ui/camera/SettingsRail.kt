@@ -133,7 +133,7 @@ private fun PreviewSettingsRail() {
             )
             SettingsRailButton(
                 iconRes = R.drawable.flash,
-                caption = "3×",
+                caption = "2×",
                 onClickLabel = "",
                 enabled = true,
                 onClick = {}
